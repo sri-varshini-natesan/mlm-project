@@ -27,7 +27,6 @@
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
-
         body { background-color: var(--bg-color); color: var(--text-main); display: flex; min-height: 100vh; overflow-x: hidden; }
 
         /* --- SIDEBAR --- */
@@ -44,7 +43,6 @@
         .user-greeting h2 { font-size: 20px; color: var(--text-main); font-weight: 800; }
         .user-greeting p { font-size: 13px; color: var(--text-muted); font-weight: 600; margin-top: 2px; }
 
-        /* User Profile in Header */
         .header-actions { display: flex; align-items: center; gap: 24px; }
         .notification { position: relative; cursor: pointer; color: var(--text-muted); font-size: 20px; transition: var(--transition); }
         .notification:hover { color: var(--color-blue); }
@@ -68,6 +66,7 @@
 
         /* Form Styling */
         .form-group { margin-bottom: 24px; }
+        .form-group { margin-bottom: 24px; }
         .form-label { font-size: 13px; font-weight: 700; color: var(--text-main); margin-bottom: 10px; display: block; }
         .form-control { width: 100%; padding: 16px; border-radius: 12px; border: 1px solid var(--border-color); background: var(--input-bg); font-weight: 700; font-size: 16px; outline: none; }
         .form-control:focus { border-color: var(--color-blue); box-shadow: 0 0 0 3px rgba(67, 24, 255, 0.1); background-color: #ffffff; }
@@ -82,7 +81,13 @@
         td { padding: 16px; font-size: 14px; font-weight: 600; border-bottom: 1px solid var(--border-color); }
 
         @media (max-width: 1024px) { .grid-2 { grid-template-columns: 1fr; } }
-        @media (max-width: 900px) { .sidebar { position: absolute; left: -260px; height: 100%; z-index: 100; } .main-content { width: 100%; } }
+        @media (max-width: 900px) { 
+            #menuToggle { display: block !important; }
+            .sidebar { position: fixed; left: -260px; top: 0; height: 100vh; z-index: 1000; } 
+            .sidebar.active { left: 0; } 
+            .main-content { width: 100%; } 
+            .top-header { padding: 16px 20px; } 
+        }
     </style>
 </head>
 <body>
@@ -103,9 +108,14 @@
 
     <main class="main-content">
         <header class="top-header">
-            <div class="user-greeting">
-                <h2>Withdraw Request</h2>
-                <p>Request payout to your linked bank account</p>
+            <div class="user-greeting" style="display: flex; align-items: center; gap: 14px;">
+                <button id="menuToggle" style="background: none; border: none; font-size: 22px; color: var(--text-main); cursor: pointer; display: none; padding: 4px;">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <div>
+                    <h2>Withdraw Request</h2>
+                    <p>Request payout to your linked bank account</p>
+                </div>
             </div>
             
             <div class="header-actions">
@@ -150,16 +160,29 @@
     </main>
 
     <script>
-    // 1. Load Real Balance and History on Page Load
     document.addEventListener("DOMContentLoaded", () => {
+        const menuToggle = document.getElementById('menuToggle');
+        const sidebar = document.getElementById('sidebar');
+
+        if (menuToggle && sidebar) {
+            menuToggle.addEventListener('click', function(e) {
+                e.stopPropagation();
+                sidebar.classList.toggle('active');
+            });
+
+            document.addEventListener('click', function(e) {
+                if (!sidebar.contains(e.target) && sidebar.classList.contains('active')) {
+                    sidebar.classList.remove('active');
+                }
+            });
+        }
+
         fetch('/api/withdraw/me')
             .then(res => res.json())
             .then(data => {
                 if (data.status === 'success') {
-                    // Update Balance
                     document.getElementById('availBalance').innerText = '₹ ' + (data.balance || 0).toLocaleString('en-IN', {minimumFractionDigits: 2});
                     
-                    // Update Table
                     const tbody = document.getElementById('historyTableBody');
                     tbody.innerHTML = ''; 
                     
@@ -188,33 +211,27 @@
             .catch(err => console.error("Error loading withdrawal data:", err));
     });
 
-    // 2. Handle Form Submission for Boss's Demo!
     document.getElementById('withdrawForm').addEventListener('submit', function(e) {
         e.preventDefault();
         
         const amtInput = document.getElementById('amount');
         const amt = parseFloat(amtInput.value);
         
-        // Grab existing available liquidity limits on screen
         let balEl = document.getElementById('availBalance');
-        let currentBal = parseFloat(balEl.innerText.replace(/[^0-9.-]+/g,"")); // Strips currency formatting symbols
+        let currentBal = parseFloat(balEl.innerText.replace(/[^0-9.-]+/g,""));
 
-        // Validation 1: Minimum standard limit checks
         if (amt < 100) {
             alert("Minimum withdrawal amount is ₹ 100");
             return;
         }
 
-        // 🌟 VALIDATION 2: Overdraft Blocker Check 🌟
         if (amt > currentBal) {
             alert("Error: Insufficient funds! Your available balance is only ₹" + currentBal.toLocaleString('en-IN', {minimumFractionDigits: 2}));
-            return; // Aborts process immediately without shifting calculations into negative integers
+            return; 
         }
 
-        // Proceed with success transaction flow execution
         alert("Withdrawal requested successfully! Net payout will be processed after 5% TDS and 5% Admin charges.");
         
-        // Render visual entry dynamically
         const tbody = document.getElementById('historyTableBody');
         let today = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
         
@@ -230,12 +247,10 @@
             tbody.insertAdjacentHTML('afterbegin', newRow);
         }
 
-        // Update real balance live values safely on screen
         balEl.innerText = '₹ ' + (currentBal - amt).toLocaleString('en-IN', {minimumFractionDigits: 2});
         amtInput.value = '';
     });
 
-    // 3. Clean Logout Function
     document.querySelector('a[href="/logout"]')?.addEventListener('click', function(e) {
         e.preventDefault();
         if (confirm("Are you sure you want to logout?")) {
