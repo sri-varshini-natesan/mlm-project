@@ -553,6 +553,55 @@ def api_my_packages():
         cursor.close()
         db.close()
 
+# 🌟 EMERGENCY FORCE DATABASE SETUP ROUTE 🌟
+@app.route('/force-db-setup')
+def force_db_setup():
+    from db_config import get_db_connection
+    conn = get_db_connection()
+    if not conn:
+        return "❌ Error: Could not establish a connection to the MySQL pool. Check your MYSQL_URL variable reference."
+    
+    try:
+        cursor = conn.cursor()
+        output = "🛠️ Starting Manual Database Sync...<br>"
+        
+        # 1. Force build users table
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS users (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            full_name VARCHAR(255) NOT NULL,
+            email VARCHAR(255) UNIQUE NOT NULL,
+            user_code VARCHAR(50) UNIQUE NOT NULL,
+            dob DATE, gender VARCHAR(20), aadhar_no VARCHAR(50), pan_no VARCHAR(50), mobile VARCHAR(20),
+            password VARCHAR(255) NOT NULL, sponsor_id INT, leg VARCHAR(20), address TEXT, profile_img VARCHAR(255),
+            is_active BOOLEAN DEFAULT FALSE, bank_acc_name VARCHAR(255), bank_acc_no VARCHAR(100), bank_ifsc VARCHAR(50),
+            upi_id VARCHAR(100), upi_mobile VARCHAR(20), created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+        """)
+        output += "✅ Users table verified.<br>"
+
+        # 2. Check and force inject/update active JOHN profile
+        cursor.execute("SELECT id, is_active FROM users WHERE user_code = 'JOHN'")
+        row = cursor.fetchone()
+        if not row:
+            cursor.execute("""
+            INSERT INTO users (full_name, email, user_code, password, is_active) 
+            VALUES ('JOHN DOE', 'john@demo.com', 'JOHN', 'John@2026', 1)
+            """)
+            output += "🎉 Successfully created active profile for JOHN!<br>"
+        else:
+            cursor.execute("UPDATE users SET is_active = 1 WHERE user_code = 'JOHN'")
+            output += f"🔄 Found JOHN (Row ID: {row[0]}). Forced is_active status to 1 (True).<br>"
+            
+        conn.commit()
+        return f"<h3>🚀 Database Setup Complete!</h3><p>{output}</p><p><a href='/login'>Go to Login</a></p>"
+        
+    except Exception as e:
+        return f"<h3>❌ Database Setup Crashed!</h3><p>Error details: {str(e)}</p>"
+    finally:
+        cursor.close()
+        conn.close()
+
 if __name__ == '__main__':
     if not app.debug or os.environ.get("WERKZEUG_RUN_MAIN") == "true":
         scheduler.start()
