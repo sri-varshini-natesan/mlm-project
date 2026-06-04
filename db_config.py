@@ -12,12 +12,14 @@ try:
     if mysql_url:
         # Parse the cloud connection string into readable parameters safely
         url = urlparse(mysql_url)
+        
+        # 🌟 FIXED DATABASE ALIGNMENT: Aligns schema namespace strictly to Railway's container target 🌟
         db_config = {
             'host': url.hostname,
             'port': url.port or 3306,
             'user': url.username,
             'password': url.password,
-            'database': url.path[1:]
+            'database': 'railway'  # Forces connection to the active cloud repository where tables sit
         }
         
         # Instantiate the pool passing the parsed cloud configurations explicitly
@@ -70,7 +72,7 @@ def get_team_stats(user_id):
         cursor.execute("SELECT COUNT(*) as directs FROM users WHERE sponsor_id = %s", (user_id,))
         directs = cursor.fetchone()['directs']
 
-        # Fixed: Updated recursive structural tracking to use sponsor_id and leg layout
+        # Recursive downline structures
         left_query = """
             WITH RECURSIVE downline AS (
                 SELECT id FROM users WHERE sponsor_id = %s AND leg = 'left'
@@ -130,7 +132,6 @@ def get_financial_stats(user_id):
         cashback_res = cursor.fetchone()
         cashback_bonus = float(cashback_res['total_cashback']) if cashback_res and cashback_res['total_cashback'] else 0.00
 
-        # Fixed: Updated dictionary keys to line up perfectly with index.html JS selectors
         return {
             "total_income": round(total_income, 2),
             "total_withdrawal": round(total_withdraw, 2),
@@ -219,7 +220,6 @@ def process_withdrawal_request(user_id, request_amount):
         cursor.close()
         db.close()
 
-# Fixed: Rearranged arguments configuration to eliminate positional validation errors on purchase executions
 def process_course_purchase(user_id, course_name, course_price, course_category="General Education"):
     db = get_db_connection()
     if not db: return {"status": "error", "message": "Database error"}
@@ -312,7 +312,6 @@ def get_user_profile(user_id):
         cursor.close()
         db.close()
 
-# Fixed: Consolidated duplicates into a single, clean image-handling profile update handler
 def update_user_profile(user_id, data):
     db = get_db_connection()
     if not db: return False
