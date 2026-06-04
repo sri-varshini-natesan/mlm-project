@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Support - User Panel</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --bg-color: #f8f9fc;
+            --sidebar-bg: #0b1437;
+            --sidebar-hover: rgba(255, 255, 255, 0.08);
+            --card-bg: #ffffff;
+            --text-main: #1b2559;
+            --text-muted: #8f9bba;
+            --color-green: #05cd99;
+            --color-blue: #4318ff;
+            --color-orange: #ffb547;
+            --color-red: #ee5d50;
+            --border-color: #e9edf7;
+            --shadow: 0 10px 30px rgba(11, 20, 55, 0.03);
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
+        body { background-color: var(--bg-color); color: var(--text-main); display: flex; min-height: 100vh; }
+
+        /* --- SIDEBAR & LAYOUT --- */
+        .sidebar { width: 260px; background-color: var(--sidebar-bg); color: white; display: flex; flex-direction: column; transition: var(--transition); flex-shrink: 0; }
+        .sidebar-header { padding: 30px 24px; font-size: 20px; font-weight: 800; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.05); color: #ffffff; }
+        .sidebar-menu { list-style: none; padding: 24px 0; flex: 1; }
+        .sidebar-menu li a { display: flex; align-items: center; padding: 16px 30px; color: #8f9bba; text-decoration: none; font-weight: 600; font-size: 15px; transition: var(--transition); }
+        .sidebar-menu li a:hover, .sidebar-menu li a.active { background-color: var(--sidebar-hover); color: white; border-right: 4px solid var(--color-blue); }
+        .sidebar-menu li a i { width: 24px; margin-right: 14px; font-size: 18px; }
+
+        .main-content { flex: 1; display: flex; flex-direction: column; width: calc(100% - 260px); }
+        .top-header { background-color: var(--card-bg); padding: 20px 32px; border-bottom: 1px solid var(--border-color); }
+        
+        /* --- SUPPORT LAYOUT --- */
+        .dashboard-container { padding: 40px; display: flex; justify-content: center; align-items: center; height: 100%; }
+        .contact-wrapper { width: 100%; max-width: 800px; display: grid; grid-template-columns: repeat(2, 1fr); gap: 32px; }
+        
+        .contact-box { 
+            background: var(--card-bg); border-radius: 24px; padding: 48px; 
+            text-align: center; border: 1px solid var(--border-color); 
+            box-shadow: var(--shadow); transition: var(--transition); 
+        }
+        .contact-box:hover { transform: translateY(-5px); box-shadow: 0 20px 40px rgba(0,0,0,0.05); }
+        
+        .contact-box i { font-size: 56px; margin-bottom: 24px; display: block; }
+        .contact-box h3 { font-size: 20px; font-weight: 800; margin-bottom: 12px; }
+        .contact-box p { font-size: 14px; color: var(--text-muted); margin-bottom: 32px; }
+        
+        .btn-action { 
+            padding: 16px 40px; border-radius: 16px; font-weight: 800; 
+            text-decoration: none; display: inline-block; transition: var(--transition); 
+            font-size: 15px;
+        }
+        
+        .btn-call { background: var(--color-green); color: white; }
+        .btn-mail { background: var(--color-blue); color: white; }
+        .btn-action:hover { opacity: 0.9; }
+
+        @media (max-width: 768px) { .contact-wrapper { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+
+    <aside class="sidebar">
+        <div class="sidebar-header">USER PANEL</div>
+        <ul class="sidebar-menu">
+            <li><a href="/"><i class="fas fa-home"></i> Dashboard</a></li>
+            <li><a href="/profile"><i class="fas fa-user"></i> Profile</a></li>
+            <li><a href="/courses"><i class="fas fa-graduation-cap"></i> My Courses</a></li>
+            <li><a href="/bank"><i class="fas fa-university"></i> Bank Details</a></li>
+            <li><a href="/withdraw"><i class="fas fa-money-bill-wave"></i> Withdraw Request</a></li>
+            <li><a href="/referral"><i class="fas fa-link"></i> Referral Link</a></li>
+            <li><a href="/support" class="active"><i class="fas fa-headset"></i> Support</a></li>
+            <li><a href="/logout" style="margin-top: auto; color: var(--color-red);"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
+        </ul>
+    </aside>
+
+    <main class="main-content">
+        <header class="top-header">
+            <h2>Support Center</h2>
+        </header>
+
+        <div class="dashboard-container">
+            <div class="contact-wrapper">
+                <div class="contact-box">
+                    <i class="fas fa-phone-alt" style="color: var(--color-green);"></i>
+                    <h3>Call Support</h3>
+                    <a href="tel:+919876543210" class="btn-action btn-call">Call Now</a>
+                </div>
+
+                <div class="contact-box">
+                    <i class="fas fa-envelope" style="color: var(--color-blue);"></i>
+                    <h3>Email Support</h3>
+                    <a href="mailto:support@yourplatform.com" class="btn-action btn-mail">Send Email</a>
+                </div>
+            </div>
+        </div>
+    </main>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const logoutBtn = document.querySelector('a[href="#logout"]');
+            
+            if (logoutBtn) {
+                logoutBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    if (confirm("Are you sure you want to logout?")) {
+                        localStorage.clear();
+                        sessionStorage.clear();
+                        window.location.href = "login.html"; 
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>
