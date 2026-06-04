@@ -255,8 +255,10 @@
             .upload-btn { width: auto; margin-top: 12px; }
         }
 
+        /* 🌟 INCORPORATED THE SLIDE OUT NAVIGATION SIDEPANEL BREAKPOINTS 🌟 */
         @media (max-width: 900px) {
-            .sidebar { position: absolute; left: -260px; height: 100%; z-index: 100; }
+            #menuToggle { display: block !important; }
+            .sidebar { position: fixed; left: -260px; top: 0; height: 100vh; z-index: 1000; }
             .sidebar.active { left: 0; }
             .main-content { width: 100%; }
             .top-header { padding: 16px 20px; }
@@ -288,9 +290,14 @@
 
     <main class="main-content">
         <header class="top-header">
-            <div class="user-greeting">
-                <h2>My Profile</h2>
-                <p>Manage your account information</p>
+            <div class="user-greeting" style="display: flex; align-items: center; gap: 14px;">
+                <button id="menuToggle" style="background: none; border: none; font-size: 22px; color: var(--text-main); cursor: pointer; display: none; padding: 4px;">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <div>
+                    <h2>My Profile</h2>
+                    <p>Manage your account information</p>
+                </div>
             </div>
             <div class="header-actions">
                 <div class="notification"><i class="far fa-bell"></i></div>
@@ -311,7 +318,6 @@
                         <h3>{{ user_name }}</h3>
                         <p>USER ID : {{ user_code }}</p>
                         
-                        <!-- REPLACED OLD DUPLICATE BUTTON WITH HIDDEN INPUT AND PROPER TRIGGER BUTTON -->
                         <input type="file" id="profileUpload" accept="image/*" style="display: none;">
                         <button type="button" class="upload-btn" onclick="document.getElementById('profileUpload').click()">
                             <i class="fas fa-camera"></i> Change Photo
@@ -323,7 +329,7 @@
                     <div class="profile-stats-container" style="width: 100%;">
                         <div class="profile-stat">
                             <span>Status</span>
-                            <span style="color: var(--color-green);">Active</span>
+                            <span id="user_status_badge">Loading...</span>
                         </div>
                         <div class="profile-stat">
                             <span>Joined</span>
@@ -391,6 +397,23 @@
     <script>
     // 0. AUTO-LOAD DATA ON PAGE LOAD (Merged with Status Badge!)
     document.addEventListener("DOMContentLoaded", () => {
+        // 🌟 WIRE UP THE MOBILE DRAWER EVENT CLICK LISTENERS FOR THE HAMBURGER BUTTON 🌟
+        const menuToggle = document.getElementById('menuToggle');
+        const sidebar = document.getElementById('sidebar');
+
+        if (menuToggle && sidebar) {
+            menuToggle.addEventListener('click', function(e) {
+                e.stopPropagation();
+                sidebar.classList.toggle('active');
+            });
+
+            document.addEventListener('click', function(e) {
+                if (!sidebar.contains(e.target) && sidebar.classList.contains('active')) {
+                    sidebar.classList.remove('active');
+                }
+            });
+        }
+
         fetch('/api/profile/me')
             .then(res => res.json())
             .then(data => {
@@ -410,9 +433,9 @@
                     let statusBadge = document.getElementById('user_status_badge'); 
                     if(statusBadge) {
                         if(p.is_active) {
-                            statusBadge.innerHTML = '<span style="background: rgba(16, 185, 129, 0.1); color: #10b981; padding: 4px 10px; border-radius: 6px; font-weight: bold;">Active</span>';
+                            statusBadge.innerHTML = '<span style="background: rgba(5, 205, 153, 0.1); color: var(--color-green); padding: 4px 10px; border-radius: 6px; font-weight: bold;">Active</span>';
                         } else {
-                            statusBadge.innerHTML = '<span style="background: rgba(239, 68, 68, 0.1); color: #ef4444; padding: 4px 10px; border-radius: 6px; font-weight: bold;">Inactive</span>';
+                            statusBadge.innerHTML = '<span style="background: rgba(239, 68, 68, 0.1); color: var(--color-red); padding: 4px 10px; border-radius: 6px; font-weight: bold;">Inactive</span>';
                         }
                     }
                 }
