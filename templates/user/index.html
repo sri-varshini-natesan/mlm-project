@@ -146,11 +146,22 @@
         .tree-stat-box .sub-val { font-size: 11px; color: var(--text-muted); margin-top: 6px; font-weight: 600; }
 
         @media (max-width: 1300px) { .grid-4 { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); } .grid-5 { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); } }
-        @media (max-width: 900px) { .sidebar { position: absolute; left: -260px; height: 100%; z-index: 100; } .sidebar.active { left: 0; } .main-content { width: 100%; } .top-header { padding: 16px 20px; } .dashboard-container { padding: 20px; } .tree-container { flex-direction: column; } .tree-stats { width: 100%; flex-direction: row; justify-content: center; flex-wrap: wrap; } }
+        
+        /* 🌟 FIXED THE CRITICAL MEDIA QUERY CLOSING BRACES BELOW 🌟 */
+        @media (max-width: 900px) { 
+            #menuToggle { display: block !important; }
+            .sidebar { position: fixed; left: -260px; top: 0; height: 100vh; z-index: 1000; } 
+            .sidebar.active { left: 0; } 
+            .main-content { width: 100%; } 
+            .top-header { padding: 16px 20px; } 
+            .dashboard-container { padding: 20px; } 
+            .tree-container { flex-direction: column; } 
+            .tree-stats { width: 100%; flex-direction: row; justify-content: center; flex-wrap: wrap; } 
+        }
     </style>
 </head>
 <body>
-
+    
     <aside class="sidebar" id="sidebar">
         <div class="sidebar-header">USER PANEL</div>
         <ul class="sidebar-menu">
@@ -164,12 +175,17 @@
             <li><a href="/logout" style="margin-top: auto; color: var(--color-red);"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
         </ul>
     </aside>
-
+    
     <main class="main-content">
         <header class="top-header">
-            <div class="user-greeting">
-                <h2>Welcome Back!</h2>
-                <p>USER ID : {{ user_code }}</p>
+            <div class="user-greeting" style="display: flex; align-items: center; gap: 14px;">
+                <button id="menuToggle" style="background: none; border: none; font-size: 22px; color: var(--text-main); cursor: pointer; display: none; padding: 4px;">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <div>
+                    <h2>Welcome Back!</h2>
+                    <p>USER ID : {{ user_code }}</p>
+                </div>
             </div>
             <div class="header-actions">
                 <div class="notification has-unread" id="notificationBell"><i class="far fa-bell"></i></div>
@@ -307,6 +323,23 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
+            // 🌟 ADDED ACTIVE TOGGLE OVERLAYS FOR SMARTPHONES 🌟
+            const menuToggle = document.getElementById('menuToggle');
+            const sidebar = document.getElementById('sidebar');
+
+            if (menuToggle && sidebar) {
+                menuToggle.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    sidebar.classList.toggle('active');
+                });
+
+                document.addEventListener('click', function(e) {
+                    if (!sidebar.contains(e.target) && sidebar.classList.contains('active')) {
+                        sidebar.classList.remove('active');
+                    }
+                });
+            }
+
             // Setup custom toast rendering engine targets
             if (!document.getElementById('custom-toast-container')) {
                 const toastContainer = document.createElement('div');
@@ -352,16 +385,13 @@
                         document.getElementById('val_total_team').innerText = (team.total_team || 0).toLocaleString('en-IN');
                         document.getElementById('val_tree_active').innerText = (team.active_team || 0).toLocaleString('en-IN');
                         
-                        // 🌟 Run network node downline tree renderer 🌟
+                        // Run network node downline tree renderer
                         loadUserTree();
                     }
                 })
                 .catch(error => console.error("Error fetching live data:", error));
         });
 
-        // ==========================================
-        // 🌿 TOAST CONTAINER RENDERING UTILITY 🌿
-        // ==========================================
         function sendUiNotification(title, message, isError = false) {
             const container = document.getElementById('custom-toast-container');
             if (container) {
@@ -387,9 +417,6 @@
             }
         }
 
-        // ==========================================
-        // 🌿 UNIFIED DYNAMIC DOWNLINE MAPPER 🌿
-        // ==========================================
         function loadUserTree() {
             const currentUserCode = "{{ user_code }}"; 
             if (!currentUserCode || currentUserCode === "None") return;
@@ -398,7 +425,6 @@
                 .then(res => res.json())
                 .then(data => {
                     if (data.status === 'success') {
-                        // 1. Process Left Placement Target
                         const leftContainer = document.getElementById('user_left_container');
                         if (data.children && data.children.left) {
                             leftContainer.innerHTML = `
@@ -416,7 +442,6 @@
                                 </div>`;
                         }
 
-                        // 2. Process Right Placement Target
                         const rightContainer = document.getElementById('user_right_container');
                         if (data.children && data.children.right) {
                             rightContainer.innerHTML = `
@@ -438,7 +463,6 @@
                 .catch(err => console.error("Error drawing dashboard downline tree:", err));
         }
 
-        // Handle structural system logout requests cleanly
         document.querySelector('a[href="/logout"]')?.addEventListener('click', function(e) {
             e.preventDefault();
             if (confirm("Are you sure you want to logout?")) {
