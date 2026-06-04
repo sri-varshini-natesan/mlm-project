@@ -26,20 +26,8 @@
             --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Inter', sans-serif;
-        }
-
-        body {
-            background-color: var(--bg-color);
-            color: var(--text-main);
-            display: flex;
-            min-height: 100vh;
-            overflow-x: hidden;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
+        body { background-color: var(--bg-color); color: var(--text-main); display: flex; min-height: 100vh; overflow-x: hidden; }
 
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(10px); }
@@ -47,119 +35,43 @@
         }
 
         /* --- SIDEBAR --- */
-        .sidebar {
-            width: 260px;
-            background-color: var(--sidebar-bg);
-            color: white;
-            display: flex;
-            flex-direction: column;
-            transition: var(--transition);
-            flex-shrink: 0;
-            z-index: 100;
-        }
-
-        .sidebar-header {
-            padding: 30px 24px;
-            font-size: 20px;
-            font-weight: 800;
-            text-align: center;
-            border-bottom: 1px solid rgba(255,255,255,0.05);
-            letter-spacing: 1px;
-            color: #ffffff;
-        }
-
-        .sidebar-menu {
-            list-style: none;
-            padding: 24px 0;
-            flex: 1;
-        }
-
-        .sidebar-menu li a {
-            display: flex;
-            align-items: center;
-            padding: 16px 30px;
-            color: #8f9bba;
-            text-decoration: none;
-            font-weight: 600;
-            font-size: 15px;
-            transition: var(--transition);
-        }
-
-        .sidebar-menu li a:hover, .sidebar-menu li a.active {
-            background-color: var(--sidebar-hover);
-            color: white;
-            border-right: 4px solid var(--color-blue);
-        }
-
+        .sidebar { width: 260px; background-color: var(--sidebar-bg); color: white; display: flex; flex-direction: column; transition: var(--transition); flex-shrink: 0; z-index: 100; }
+        .sidebar-header { padding: 30px 24px; font-size: 20px; font-weight: 800; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.05); letter-spacing: 1px; color: #ffffff; }
+        .sidebar-menu { list-style: none; padding: 24px 0; flex: 1; }
+        .sidebar-menu li a { display: flex; align-items: center; padding: 16px 30px; color: #8f9bba; text-decoration: none; font-weight: 600; font-size: 15px; transition: var(--transition); }
+        .sidebar-menu li a:hover, .sidebar-menu li a.active { background-color: var(--sidebar-hover); color: white; border-right: 4px solid var(--color-blue); }
         .sidebar-menu li a i { width: 24px; margin-right: 14px; font-size: 18px; }
 
         /* --- MAIN CONTENT --- */
-        .main-content {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            overflow-y: auto;
-            overflow-x: hidden;
-            width: calc(100% - 260px);
-        }
+        .main-content { flex: 1; display: flex; flex-direction: column; overflow-y: auto; overflow-x: hidden; width: calc(100% - 260px); }
 
         /* --- TOP HEADER --- */
-        .top-header {
-            background-color: var(--card-bg);
-            padding: 16px 32px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 1px solid var(--border-color);
-            position: sticky;
-            top: 0;
-            z-index: 50;
-        }
-
+        .top-header { background-color: var(--card-bg); padding: 16px 32px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); position: sticky; top: 0; z-index: 50; }
         .user-greeting h2 { font-size: 20px; color: var(--text-main); font-weight: 800; }
         .user-greeting p { font-size: 13px; color: var(--text-muted); font-weight: 600; margin-top: 2px; }
 
         .header-actions { display: flex; align-items: center; gap: 24px; }
         .notification { position: relative; cursor: pointer; color: var(--text-muted); font-size: 20px; transition: var(--transition); }
         .notification:hover { color: var(--color-blue); }
-        .notification::after {
-            content: ''; position: absolute; top: -2px; right: -2px; width: 8px; height: 8px;
-            background-color: var(--color-red); border-radius: 50%; border: 2px solid white;
-        }
+        .notification::after { content: ''; position: absolute; top: -2px; right: -2px; width: 8px; height: 8px; background-color: var(--color-red); border-radius: 50%; border: 2px solid white; }
 
         .user-profile { display: flex; align-items: center; gap: 12px; cursor: pointer; }
         .user-profile img { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; border: 2px solid var(--border-color); }
 
         /* --- DASHBOARD CONTAINER --- */
-        .dashboard-container {
-            padding: 32px;
-            max-width: 100%;
-            animation: fadeIn 0.5s ease-out forwards;
-        }
-
+        .dashboard-container { padding: 32px; max-width: 100%; animation: fadeIn 0.5s ease-out forwards; }
         .page-title { font-size: 24px; font-weight: 800; color: var(--text-main); margin-bottom: 24px; }
 
         /* --- PROFILE LAYOUT --- */
         .profile-grid { display: grid; grid-template-columns: 300px 1fr; gap: 24px; }
+        .card { background-color: var(--card-bg); border-radius: 20px; border: 1px solid var(--border-color); box-shadow: var(--shadow); padding: 32px; }
 
-        .card {
-            background-color: var(--card-bg);
-            border-radius: 20px;
-            border: 1px solid var(--border-color);
-            box-shadow: var(--shadow);
-            padding: 32px;
-        }
-
-        /* Profile Left Side */
         .profile-card { display: flex; flex-direction: column; align-items: center; text-align: center; }
         .profile-card img { width: 120px; height: 120px; border-radius: 50%; object-fit: cover; border: 4px solid var(--bg-color); box-shadow: var(--shadow); margin-bottom: 16px; }
         .profile-card h3 { font-size: 20px; font-weight: 800; color: var(--text-main); margin-bottom: 4px; }
         .profile-card p { font-size: 14px; color: var(--text-muted); font-weight: 600; margin-bottom: 16px; }
 
-        .upload-btn {
-            background-color: var(--input-bg); color: var(--color-blue); border: none; padding: 10px 20px;
-            border-radius: 12px; font-weight: 700; font-size: 13px; cursor: pointer; transition: var(--transition); width: 100%;
-        }
+        .upload-btn { background-color: var(--input-bg); color: var(--color-blue); border: none; padding: 10px 20px; border-radius: 12px; font-weight: 700; font-size: 13px; cursor: pointer; transition: var(--transition); width: 100%; }
         .upload-btn:hover { background-color: var(--color-blue); color: white; }
 
         .profile-divider { width: 100%; height: 1px; background-color: var(--border-color); margin: 24px 0; }
@@ -167,86 +79,30 @@
         .profile-stat span:first-child { color: var(--text-muted); font-weight: 600; }
         .profile-stat span:last-child { color: var(--text-main); font-weight: 800; }
 
-        /* Profile Right Side (Form) */
-        .form-title {
-            font-size: 16px; font-weight: 800; color: var(--text-main); margin-bottom: 24px;
-            text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center;
-        }
-        .form-title::before {
-            content: ''; display: inline-block; width: 4px; height: 18px;
-            background-color: var(--color-blue); border-radius: 4px; margin-right: 12px;
-        }
+        .form-title { font-size: 16px; font-weight: 800; color: var(--text-main); margin-bottom: 24px; text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; }
+        .form-title::before { content: ''; display: inline-block; width: 4px; height: 18px; background-color: var(--color-blue); border-radius: 4px; margin-right: 12px; }
 
         .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
         .form-group { display: flex; flex-direction: column; margin-bottom: 20px; }
         .form-group.full-width { grid-column: 1 / -1; }
-
         .form-label { font-size: 13px; font-weight: 700; color: var(--text-main); margin-bottom: 8px; }
 
-        /* Standard Input */
-        .form-control {
-            width: 100%; padding: 14px 16px; border-radius: 12px; border: 1px solid var(--border-color);
-            background-color: var(--input-bg); font-size: 14px; font-weight: 600; color: var(--text-main);
-            transition: var(--transition); outline: none;
-        }
-
+        .form-control { width: 100%; padding: 14px 16px; border-radius: 12px; border: 1px solid var(--border-color); background-color: var(--input-bg); font-size: 14px; font-weight: 600; color: var(--text-main); transition: var(--transition); outline: none; }
         .form-control:focus { border-color: var(--color-blue); box-shadow: 0 0 0 3px rgba(67, 24, 255, 0.1); background-color: #ffffff; }
         .form-control::placeholder { color: #b0bad3; font-weight: 500; }
         
-        /* Validation Error State */
-        .form-control.error, .input-group.error {
-            border-color: var(--color-red) !important;
-            box-shadow: 0 0 0 3px rgba(238, 93, 80, 0.1) !important;
-            background-color: #fff9f9;
-        }
+        .form-control.error, .input-group.error { border-color: var(--color-red) !important; box-shadow: 0 0 0 3px rgba(238, 93, 80, 0.1) !important; background-color: #fff9f9; }
+        .error-msg { color: var(--color-red); font-size: 11px; font-weight: 600; margin-top: 6px; display: none; }
 
-        .error-msg {
-            color: var(--color-red);
-            font-size: 11px;
-            font-weight: 600;
-            margin-top: 6px;
-            display: none;
-        }
-
-        /* Combined Input Group (For Mobile Prefix) */
-        .input-group {
-            display: flex;
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
-            overflow: hidden;
-            background-color: var(--input-bg);
-            transition: var(--transition);
-        }
+        .input-group { display: flex; border: 1px solid var(--border-color); border-radius: 12px; overflow: hidden; background-color: var(--input-bg); transition: var(--transition); }
+        .input-group:focus-within { border-color: var(--color-blue); box-shadow: 0 0 0 3px rgba(67, 24, 255, 0.1); background-color: #ffffff; }
+        .input-group .prefix { border: none; background: transparent; padding: 14px 12px 14px 16px; font-weight: 700; color: var(--text-muted); border-right: 1px solid var(--border-color); display: flex; align-items: center; justify-content: center; }
+        .input-group input { border: none; background: transparent; flex: 1; padding: 14px 16px; outline: none; font-size: 14px; font-weight: 600; color: var(--text-main); }
         
-        .input-group:focus-within {
-            border-color: var(--color-blue);
-            box-shadow: 0 0 0 3px rgba(67, 24, 255, 0.1);
-            background-color: #ffffff;
-        }
-
-        .input-group .prefix {
-            border: none; background: transparent; padding: 14px 12px 14px 16px;
-            font-weight: 700; color: var(--text-muted); border-right: 1px solid var(--border-color);
-            display: flex; align-items: center; justify-content: center;
-        }
-
-        .input-group input {
-            border: none; background: transparent; flex: 1;
-            padding: 14px 16px; outline: none; font-size: 14px; font-weight: 600; color: var(--text-main);
-        }
-        
-        .input-group input::placeholder { color: #b0bad3; font-weight: 500; }
-
         textarea.form-control { resize: vertical; min-height: 100px; }
-
-        .btn-primary {
-            background-color: var(--color-blue); color: white; border: none; padding: 14px 28px;
-            border-radius: 12px; font-size: 14px; font-weight: 700; cursor: pointer;
-            transition: var(--transition); display: inline-flex; align-items: center; gap: 8px;
-        }
+        .btn-primary { background-color: var(--color-blue); color: white; border: none; padding: 14px 28px; border-radius: 12px; font-size: 14px; font-weight: 700; cursor: pointer; transition: var(--transition); display: inline-flex; align-items: center; gap: 8px; }
         .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(67, 24, 255, 0.3); }
 
-        /* Responsive Breakpoints */
         @media (max-width: 1024px) {
             .profile-grid { grid-template-columns: 1fr; }
             .profile-card { flex-direction: row; text-align: left; padding: 24px; gap: 24px; }
@@ -255,8 +111,10 @@
             .upload-btn { width: auto; margin-top: 12px; }
         }
 
+        /* 🌟 MOBILE DRAWER SYNC 🌟 */
         @media (max-width: 900px) {
-            .sidebar { position: absolute; left: -260px; height: 100%; z-index: 100; }
+            #menuToggle { display: block !important; }
+            .sidebar { position: fixed; left: -260px; top: 0; height: 100vh; z-index: 1000; }
             .sidebar.active { left: 0; }
             .main-content { width: 100%; }
             .top-header { padding: 16px 20px; }
@@ -288,9 +146,14 @@
 
     <main class="main-content">
         <header class="top-header">
-            <div class="user-greeting">
-                <h2>My Profile</h2>
-                <p>Manage your account information</p>
+            <div class="user-greeting" style="display: flex; align-items: center; gap: 14px;">
+                <button id="menuToggle" style="background: none; border: none; font-size: 22px; color: var(--text-main); cursor: pointer; display: none; padding: 4px;">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <div>
+                    <h2>My Profile</h2>
+                    <p>Manage your account information</p>
+                </div>
             </div>
             <div class="header-actions">
                 <div class="notification"><i class="far fa-bell"></i></div>
@@ -302,28 +165,22 @@
 
         <div class="dashboard-container">
             <h1 class="page-title">Profile Settings</h1>
-            
             <div class="profile-grid">
-                
                 <div class="card profile-card">
                     <div>
                         <img src="{{ profile_img }}" alt="Profile">
                         <h3>{{ user_name }}</h3>
                         <p>USER ID : {{ user_code }}</p>
-                        
-                        <!-- REPLACED OLD DUPLICATE BUTTON WITH HIDDEN INPUT AND PROPER TRIGGER BUTTON -->
                         <input type="file" id="profileUpload" accept="image/*" style="display: none;">
                         <button type="button" class="upload-btn" onclick="document.getElementById('profileUpload').click()">
                             <i class="fas fa-camera"></i> Change Photo
                         </button>
                     </div>
-                    
                     <div class="profile-divider"></div>
-                    
                     <div class="profile-stats-container" style="width: 100%;">
                         <div class="profile-stat">
                             <span>Status</span>
-                            <span style="color: var(--color-green);">Active</span>
+                            <span id="user_status_badge">Loading...</span>
                         </div>
                         <div class="profile-stat">
                             <span>Joined</span>
@@ -334,15 +191,12 @@
 
                 <div class="card">
                     <div class="form-title">Personal Information</div>
-                    
                     <form action="#" method="POST" id="profileForm">
                         <div class="form-grid">
-                            
                             <div class="form-group">
                                 <label class="form-label">Full Name (Read Only)</label>
-                                <input type="text" id="p_name" class="form-control" placeholder="Enter your full name" value="{{ user_name }}" readonly style="color: #8f9bba;">
+                                <input type="text" id="p_name" class="form-control" readonly style="color: #8f9bba;">
                             </div>
-
                             <div class="form-group">
                                 <label class="form-label">Mobile Number</label>
                                 <div class="input-group" id="mobileGroup">
@@ -351,31 +205,25 @@
                                 </div>
                                 <div class="error-msg" id="mobileError"><i class="fas fa-exclamation-circle"></i> Mobile number must be exactly 10 digits.</div>
                             </div>
-
-                            <div class="form-group full-width">
+                            <div class="form-group table-container full-width">
                                 <label class="form-label">Email Address (Read Only)</label>
-                                <input type="email" id="p_email" class="form-control" placeholder="Enter email address" value="" readonly style="color: #8f9bba;">
+                                <input type="email" id="p_email" class="form-control" readonly style="color: #8f9bba;">
                             </div>
-
                             <div class="form-group">
                                 <label class="form-label">Aadhaar Number</label>
                                 <input type="text" id="aadharInput" class="form-control" placeholder="12 Digit Aadhaar Number" maxlength="12">
                                 <div class="error-msg" id="aadharError"><i class="fas fa-exclamation-circle"></i> Aadhaar must be exactly 12 digits.</div>
                             </div>
-
                             <div class="form-group">
                                 <label class="form-label">PAN Number</label>
                                 <input type="text" id="panInput" class="form-control" placeholder="e.g. ABCDE1234F" maxlength="10">
                                 <div class="error-msg" id="panError"><i class="fas fa-exclamation-circle"></i> Invalid PAN format (e.g., ABCDE1234F).</div>
                             </div>
-
                             <div class="form-group full-width">
                                 <label class="form-label">Full Address</label>
                                 <textarea id="p_address" class="form-control" placeholder="Enter your complete address"></textarea>
                             </div>
-
                         </div>
-
                         <div style="margin-top: 16px; text-align: right;">
                             <button type="submit" id="saveBtn" class="btn-primary">
                                 <i class="fas fa-save"></i> Save Changes
@@ -383,161 +231,129 @@
                         </div>
                     </form>
                 </div>
-                
             </div>
         </div>
     </main>
 
     <script>
-    // 0. AUTO-LOAD DATA ON PAGE LOAD (Merged with Status Badge!)
-    document.addEventListener("DOMContentLoaded", () => {
-        fetch('/api/profile/me')
-            .then(res => res.json())
-            .then(data => {
-                if(data.status === 'success') {
-                    const p = data.data;
-                    
-                    // Fill the form fields
-                    document.getElementById('p_name').value = p.full_name || '';
-                    document.getElementById('p_email').value = p.email || '';
-                    document.getElementById('mobileInput').value = p.mobile || '';
-                    document.getElementById('aadharInput').value = p.aadhar_no || '';
-                    document.getElementById('panInput').value = p.pan_no || '';
-                    document.getElementById('p_address').value = p.address || '';
-                    document.getElementById('joinedLabel').innerText = p.joined_date || 'Unknown';
-                    
-                    // 🌟 UPDATE 2: Handle the DB Status Badge! 🌟
-                    let statusBadge = document.getElementById('user_status_badge'); 
-                    if(statusBadge) {
-                        if(p.is_active) {
-                            statusBadge.innerHTML = '<span style="background: rgba(16, 185, 129, 0.1); color: #10b981; padding: 4px 10px; border-radius: 6px; font-weight: bold;">Active</span>';
-                        } else {
-                            statusBadge.innerHTML = '<span style="background: rgba(239, 68, 68, 0.1); color: #ef4444; padding: 4px 10px; border-radius: 6px; font-weight: bold;">Inactive</span>';
+        document.addEventListener("DOMContentLoaded", () => {
+            const menuToggle = document.getElementById('menuToggle');
+            const sidebar = document.getElementById('sidebar');
+            if (menuToggle && sidebar) {
+                menuToggle.addEventListener('click', e => { e.stopPropagation(); sidebar.classList.toggle('active'); });
+                document.addEventListener('click', e => { if (!sidebar.contains(e.target) && sidebar.classList.contains('active')) sidebar.classList.remove('active'); });
+            }
+
+            fetch('/api/profile/me')
+                .then(res => res.json())
+                .then(data => {
+                    if(data.status === 'success') {
+                        const p = data.data;
+                        document.getElementById('p_name').value = p.full_name || '';
+                        document.getElementById('p_email').value = p.email || '';
+                        document.getElementById('mobileInput').value = p.mobile || '';
+                        document.getElementById('aadharInput').value = p.aadhar_no || '';
+                        document.getElementById('panInput').value = p.pan_no || '';
+                        document.getElementById('p_address').value = p.address || '';
+                        document.getElementById('joinedLabel').innerText = p.joined_date || 'Unknown';
+                        
+                        let statusBadge = document.getElementById('user_status_badge'); 
+                        if(statusBadge) {
+                            statusBadge.innerHTML = p.is_active ? 
+                                '<span style="background: rgba(5, 205, 153, 0.1); color: var(--color-green); padding: 4px 10px; border-radius: 6px; font-weight: bold;">Active</span>' : 
+                                '<span style="background: rgba(238, 93, 80, 0.1); color: var(--color-red); padding: 4px 10px; border-radius: 6px; font-weight: bold;">Inactive</span>';
                         }
                     }
-                }
-            })
-            .catch(err => console.error("Error loading profile:", err));
-    });
-
-    // 0.5 PROFILE PICTURE LIVE PREVIEW
-    document.getElementById('profileUpload').addEventListener('change', function(event) {
-        const file = event.target.files[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const images = document.querySelectorAll('img[alt="Profile"]');
-                images.forEach(img => img.src = e.target.result);
-            }
-            reader.readAsDataURL(file);
-        }
-    });
-
-    // 1. MOBILE NUMBER VALIDATION
-    const mobileInput = document.getElementById('mobileInput');
-    const mobileGroup = document.getElementById('mobileGroup');
-    const mobileError = document.getElementById('mobileError');
-
-    mobileInput.addEventListener('input', function() {
-        this.value = this.value.replace(/\D/g, ''); 
-        if (this.value.length > 0 && this.value.length !== 10) {
-            mobileGroup.classList.add('error');
-            mobileError.style.display = 'block';
-        } else {
-            mobileGroup.classList.remove('error');
-            mobileError.style.display = 'none';
-        }
-    });
-
-    // 2. ID NUMBER VALIDATION
-    const aadharInput = document.getElementById('aadharInput');
-    const aadharError = document.getElementById('aadharError');
-
-    aadharInput.addEventListener('input', function() {
-        this.value = this.value.replace(/\D/g, ''); 
-        if (this.value.length > 0 && this.value.length !== 12) {
-            this.classList.add('error');
-            aadharError.style.display = 'block';
-        } else {
-            this.classList.remove('error');
-            aadharError.style.display = 'none';
-        }
-    });
-
-    // 3. TAX CARD VALIDATION
-    const panInput = document.getElementById('panInput');
-    const panError = document.getElementById('panError');
-
-    panInput.addEventListener('input', function() {
-        this.value = this.value.toUpperCase();
-        this.value = this.value.replace(/[^A-Z0-9]/g, ''); 
-        
-        const panPattern = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
-
-        if (this.value.length > 0 && !panPattern.test(this.value)) {
-            this.classList.add('error');
-            panError.style.display = 'block';
-        } else {
-            this.classList.remove('error');
-            panError.style.display = 'none';
-        }
-    });
-
-    // 4. SUBMIT FORM TO DATABASE
-    document.getElementById('profileForm').addEventListener('submit', function(e) {
-        e.preventDefault(); 
-        
-        const hasErrors = document.querySelectorAll('.error').length > 0;
-        if (hasErrors) {
-            alert("Please fix the validation errors before saving.");
-            return;
-        }
-
-        const btn = document.getElementById('saveBtn');
-        const originalText = btn.innerHTML;
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
-
-        const formData = new FormData();
-        formData.append('full_name', document.getElementById('p_name').value);
-        formData.append('mobile', document.getElementById('mobileInput').value);
-        formData.append('aadhar_no', document.getElementById('aadharInput').value);
-        formData.append('pan_no', document.getElementById('panInput').value);
-        formData.append('address', document.getElementById('p_address').value);
-        
-        const photoFile = document.getElementById('profileUpload').files[0];
-        if (photoFile) {
-            formData.append('profile_image', photoFile);
-        }
-
-        fetch('/api/profile/update', {
-            method: 'POST',
-            body: formData 
-        })
-        .then(res => res.json())
-        .then(data => {
-            alert(data.message);
-            if(data.status === 'success') {
-                window.location.reload();
-            } else {
-                btn.innerHTML = originalText;
-            }
-        })
-        .catch(err => {
-            console.error("Save error:", err);
-            alert("Server error. Check your terminal.");
-            btn.innerHTML = originalText;
+                })
+                .catch(err => console.error("Error loading profile:", err));
         });
-    });
 
-    // 5. Clean Logout
-    document.querySelector('a[href="/logout"]')?.addEventListener('click', function(e) {
-        e.preventDefault();
-        if (confirm("Are you sure you want to logout?")) {
-            localStorage.clear(); 
-            sessionStorage.clear();
-            window.location.href = "/logout"; 
-        }
-    });
-</script>
+        document.getElementById('profileUpload').addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.querySelectorAll('img[alt="Profile"]').forEach(img => img.src = e.target.result);
+                }
+                reader.readAsDataURL(file);
+            }
+        });
+
+        const mobileInput = document.getElementById('mobileInput');
+        const mobileGroup = document.getElementById('mobileGroup');
+        const mobileError = document.getElementById('mobileError');
+        mobileInput.addEventListener('input', function() {
+            this.value = this.value.replace(/\D/g, ''); 
+            if (this.value.length > 0 && this.value.length !== 10) {
+                mobileGroup.classList.add('error'); mobileError.style.display = 'block';
+            } else {
+                mobileGroup.classList.remove('error'); mobileError.style.display = 'none';
+            }
+        });
+
+        const aadharInput = document.getElementById('aadharInput');
+        const aadharError = document.getElementById('aadharError');
+        aadharInput.addEventListener('input', function() {
+            this.value = this.value.replace(/\D/g, ''); 
+            if (this.value.length > 0 && this.value.length !== 12) {
+                this.classList.add('error'); aadharError.style.display = 'block';
+            } else {
+                this.classList.remove('error'); aadharError.style.display = 'none';
+            }
+        });
+
+        const panInput = document.getElementById('panInput');
+        const panError = document.getElementById('panError');
+        panInput.addEventListener('input', function() {
+            this.value = this.value.toUpperCase().replace(/[^A-Z0-9]/g, ''); 
+            const panPattern = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
+            if (this.value.length > 0 && !panPattern.test(this.value)) {
+                this.classList.add('error'); panError.style.display = 'block';
+            } else {
+                this.classList.remove('error'); panError.style.display = 'none';
+            }
+        });
+
+        document.getElementById('profileForm').addEventListener('submit', function(e) {
+            e.preventDefault(); 
+            if (document.querySelectorAll('.error').length > 0) {
+                alert("Please fix the validation errors before saving."); return;
+            }
+
+            const btn = document.getElementById('saveBtn');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+
+            const formData = new FormData();
+            formData.append('full_name', document.getElementById('p_name').value);
+            formData.append('mobile', mobileInput.value);
+            formData.append('aadhar_no', aadharInput.value);
+            formData.append('pan_no', panInput.value);
+            formData.append('address', document.getElementById('p_address').value);
+            
+            const photoFile = document.getElementById('profileUpload').files[0];
+            if (photoFile) formData.append('profile_image', photoFile);
+
+            fetch('/api/profile/update', { method: 'POST', body: formData })
+            .then(res => res.json())
+            .then(data => {
+                alert(data.message);
+                if(data.status === 'success') { window.location.reload(); } 
+                else { btn.innerHTML = originalText; }
+            })
+            .catch(err => {
+                console.error("Save error:", err);
+                alert("Server connection failure.");
+                btn.innerHTML = originalText;
+            });
+        });
+
+        document.querySelector('a[href="/logout"]')?.addEventListener('click', function(e) {
+            e.preventDefault();
+            if (confirm("Are you sure you want to logout?")) {
+                localStorage.clear(); sessionStorage.clear(); window.location.href = "/logout"; 
+            }
+        });
+    </script>
 </body>
 </html>
