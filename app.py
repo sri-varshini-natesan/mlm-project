@@ -260,11 +260,9 @@ def api_signup():
 
 @app.route('/api/admin/tree-data/<user_code>')
 def api_admin_tree_data(user_code):
-    # 🌟 FIX: Allow ANY logged-in account (User or Admin) to fetch network stats 🌟
     if 'user_id' not in session:
         return jsonify({"error": "Unauthorized"}), 401
         
-    # Query your clean db_config function directly
     tree_data = get_tree_view_data(user_code)
     
     if tree_data:
@@ -317,6 +315,7 @@ def api_get_profile():
     user_id = session['user_id']
     user_name = session.get('user_name')
 
+    # 🌟 SYNCHRONIZED MOCK DICTIONARY ATTRIBUTE OBJECT BELOW 🌟
     if user_name == "John Doe":
         return jsonify({
             "status": "success",
@@ -324,7 +323,8 @@ def api_get_profile():
                 "full_name": "John Doe", "email": "johndoe@mlm.com", "mobile": "9876543210",
                 "aadhar_no": "[Aadhaar Masked]", "pan_no": "ABCDE1234F", 
                 "joined_date": "Joined Jan 12, 2024", 
-                "address": "123 Main Street, Tech City" 
+                "address": "123 Main Street, Tech City",
+                "is_active": True # 🚀 THIS SPECIFIC INDICATOR LINE WAS MISSING FROM YOUR CODE!
             }
         })
 
@@ -381,7 +381,6 @@ def api_purchase_course():
     course_name = data.get('course_name')
     course_price = float(data.get('course_price', 0))
 
-    # Fixed: Matches the updated parameters configuration inside db_config
     result = process_course_purchase(session['user_id'], course_name, course_price)
 
     print(f"📧 EMAIL SENT TO {session.get('user_name')}: Confirmation of {course_name} purchase.")
@@ -525,12 +524,11 @@ def admin_security_page():
 def api_my_packages():
     if 'user_id' not in session: return jsonify({"error": "Unauthorized"}), 401
     
-    # Mock data for John Doe simulation
     if session.get('user_name') == "John Doe":
         return jsonify({
             "status": "success",
             "packages": ["Course BC2"],
-            "highest_price": 1700.0  # Simulates owning Course BC2
+            "highest_price": 1700.0 
         })
         
     db = get_db_connection()
@@ -578,7 +576,7 @@ def force_db_setup():
             upi_id VARCHAR(100), upi_mobile VARCHAR(20), created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
         """)
-        output += "✅ Users table verified.<br>"
+        output += "Base database schema configuration verified.<br>"
 
         # 2. Check and force inject/update active JOHN profile
         cursor.execute("SELECT id, is_active FROM users WHERE user_code = 'JOHN'")
@@ -607,10 +605,7 @@ if __name__ == '__main__':
         scheduler.start()
         print("🚀 Notification Scheduler initialized successfully.")
 
-    # 🌟 EXPLICIT CLOUD ENGINE PORT BINDING 🌟
-    # Dynamically targets Railway's environmental variables, dropping back to 5000 locally
     port = int(os.environ.get("PORT", 5000))
     print(f"🚀 Secure Production Server launching! Open tunnel on port: {port}")
     
-    # Run server without forcing hardcoded debug re-loaders in production
     app.run(host='0.0.0.0', port=port, debug=False)
