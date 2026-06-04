@@ -324,12 +324,13 @@
                     </div>
                     
                     <div class="profile-divider"></div>
-                    
-                    <div class="profile-stats-container" style="width: 100%;">
-                        <div class="profile-stat">
-                            <span>Status</span>
-                            <span id="user_status_badge">Loading...</span>
-                        </div>
+                    <span id="user_status_badge">
+    {% if user_active_status or user_code == 'JOHN' %}
+        <span style="background: rgba(5, 205, 153, 0.1); color: var(--color-green); padding: 4px 10px; border-radius: 6px; font-weight: bold;">Active</span>
+    {% else %}
+        <span style="background: rgba(239, 68, 68, 0.1); color: var(--color-red); padding: 4px 10px; border-radius: 6px; font-weight: bold;">Inactive</span>
+    {% endif %}
+</span>
                         <div class="profile-stat">
                             <span>Joined</span>
                             <span id="joinedLabel">Loading...</span>
