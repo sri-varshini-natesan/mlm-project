@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - User Panel</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --bg-color: #0b1437;
+            --card-bg: #ffffff;
+            --text-main: #1b2559;
+            --text-muted: #8f9bba;
+            --color-blue: #4318ff;
+            --input-bg: #f4f7fe;
+            --border-color: #e9edf7;
+            --transition: all 0.3s ease;
+        }
+
+        body { 
+            background-color: var(--bg-color); 
+            font-family: 'Inter', sans-serif; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            min-height: 100vh; 
+            margin: 0;
+            padding: 20px;
+        }
+        
+        .login-card { 
+            background: var(--card-bg); 
+            padding: 48px; 
+            border-radius: 24px; 
+            width: 100%; 
+            max-width: 400px; 
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3); 
+            text-align: center;
+        }
+
+        .logo-icon {
+            font-size: 40px;
+            color: var(--color-blue);
+            margin-bottom: 24px;
+        }
+
+        h2 { color: var(--text-main); margin-bottom: 8px; font-weight: 800; }
+        p { color: var(--text-muted); margin-bottom: 32px; font-size: 14px; font-weight: 600; }
+        
+        .form-group { margin-bottom: 20px; text-align: left; }
+        label { display: block; font-size: 13px; font-weight: 700; color: var(--text-main); margin-bottom: 8px; }
+        
+        input { 
+            width: 100%; padding: 16px; border-radius: 12px; border: 1px solid var(--border-color); 
+            background: var(--input-bg); box-sizing: border-box; font-weight: 600; outline: none; transition: var(--transition);
+        }
+        input:focus { border-color: var(--color-blue); background: #ffffff; }
+        
+        .btn-login { 
+            width: 100%; padding: 16px; background: var(--color-blue); color: white; border: none; 
+            border-radius: 12px; font-weight: 800; cursor: pointer; margin-top: 10px; transition: var(--transition); 
+        }
+        .btn-login:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(67, 24, 255, 0.3); }
+        
+        .footer-link { text-align: center; margin-top: 24px; font-size: 14px; color: var(--text-muted); font-weight: 600; }
+        a { color: var(--color-blue); font-weight: 700; text-decoration: none; }
+    </style>
+</head>
+<body>
+
+    <div class="login-card">
+        <div class="logo-icon"><i class="fas fa-user-circle"></i></div>
+        <h2>Sign In</h2>
+        <p>Enter your details to access dashboard</p>
+        
+        <form id="loginForm">
+            <div class="form-group">
+                <label>Sponser ID</label>
+                <input type="text" id="user_code_input" placeholder="Enter your Sponser ID" required>
+            </div>
+            
+            <div class="form-group">
+                <label>Password</label>
+                <input type="password" id="password_input" placeholder="Enter your password" required>
+            </div>
+
+            <button type="submit" class="btn-login">SIGN IN</button>
+        </form>
+
+        <div class="footer-link">
+            Don't have an account? <a href="/signup">Sign Up</a>
+        </div>
+    </div>
+
+    <script>
+    document.getElementById('loginForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const btn = document.querySelector('button[type="submit"]');
+        const originalText = btn.innerHTML; // Fixed: Save original text before changing it
+        
+        btn.innerText = "Authenticating...";
+        btn.disabled = true;
+
+        // Grab inputs from your HTML
+        const loginData = {
+            user_code: document.getElementById('user_code_input').value, 
+            password: document.getElementById('password_input').value
+        };
+
+        fetch('/api/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(loginData) // Fixed: Changed payload to loginData
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === 'success') {
+                // 🌟 Dynamically redirects to /admin/dashboard or / based on role!
+                window.location.href = data.redirect;
+            } else {
+                alert(data.message);
+                btn.innerHTML = originalText; // Reset button text
+                btn.disabled = false;
+            }
+        })
+        .catch(error => {
+            console.error('Real JS Error:', error);
+            alert("A system error occurred. Check the console.");
+            btn.innerHTML = originalText; // Reset button text on network crash
+            btn.disabled = false;
+        });
+    });
+</script>
+</body>
+</html>

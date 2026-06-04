@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Referral Links - User Panel</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --bg-color: #f8f9fc;
+            --sidebar-bg: #0b1437;
+            --sidebar-hover: rgba(255, 255, 255, 0.08);
+            --card-bg: #ffffff;
+            --text-main: #1b2559;
+            --text-muted: #8f9bba;
+            --color-green: #05cd99;
+            --color-blue: #4318ff;
+            --color-orange: #ffb547;
+            --color-red: #ee5d50;
+            --border-color: #e9edf7;
+            --input-bg: #f4f7fe;
+            --shadow: 0 10px 30px rgba(11, 20, 55, 0.03);
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
+        body { background-color: var(--bg-color); color: var(--text-main); display: flex; min-height: 100vh; overflow-x: hidden; }
+
+        /* --- SIDEBAR & MAIN CONTENT (Same as before) --- */
+        .sidebar { width: 260px; background-color: var(--sidebar-bg); color: white; display: flex; flex-direction: column; transition: var(--transition); flex-shrink: 0; z-index: 100; }
+        .sidebar-header { padding: 30px 24px; font-size: 20px; font-weight: 800; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.05); letter-spacing: 1px; color: #ffffff; }
+        .sidebar-menu { list-style: none; padding: 24px 0; flex: 1; }
+        .sidebar-menu li a { display: flex; align-items: center; padding: 16px 30px; color: #8f9bba; text-decoration: none; font-weight: 600; font-size: 15px; transition: var(--transition); }
+        .sidebar-menu li a:hover, .sidebar-menu li a.active { background-color: var(--sidebar-hover); color: white; border-right: 4px solid var(--color-blue); }
+        .sidebar-menu li a i { width: 24px; margin-right: 14px; font-size: 18px; }
+        .main-content { flex: 1; display: flex; flex-direction: column; overflow-y: auto; width: calc(100% - 260px); }
+        .top-header { background-color: var(--card-bg); padding: 16px 32px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); position: sticky; top: 0; z-index: 50; }
+        .user-greeting h2 { font-size: 20px; color: var(--text-main); font-weight: 800; }
+        .user-greeting p { font-size: 13px; color: var(--text-muted); font-weight: 600; margin-top: 2px; }
+
+        /* --- CONTAINER --- */
+        .dashboard-container { padding: 32px; }
+        .card { background-color: var(--card-bg); border-radius: 20px; border: 1px solid var(--border-color); box-shadow: var(--shadow); padding: 32px; margin-bottom: 24px; }
+        
+        /* Referral Box Styling */
+        .referral-container { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+        .ref-box { background: var(--input-bg); padding: 24px; border-radius: 16px; border: 1px solid var(--border-color); text-align: center; }
+        .ref-label { font-size: 14px; font-weight: 800; color: var(--text-main); margin-bottom: 16px; display: flex; align-items: center; justify-content: center; gap: 8px; }
+        .ref-link { background: #ffffff; padding: 12px; border-radius: 10px; border: 1px dashed var(--color-blue); color: var(--color-blue); font-size: 13px; font-weight: 700; margin-bottom: 16px; word-break: break-all; }
+        .btn-copy { background: var(--color-blue); color: white; border: none; padding: 12px 24px; border-radius: 10px; font-weight: 800; cursor: pointer; transition: var(--transition); }
+        .btn-copy:hover { background: #3513cc; }
+
+        @media (max-width: 900px) { .referral-container { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">USER PANEL</div>
+        <ul class="sidebar-menu">
+            <li><a href="/"><i class="fas fa-home"></i> Dashboard</a></li>
+            <li><a href="/profile"><i class="fas fa-user"></i> Profile</a></li>
+            <li><a href="/courses"><i class="fas fa-graduation-cap"></i> My Courses</a></li>
+            <li><a href="/bank"><i class="fas fa-university"></i> Bank Details</a></li>
+            <li><a href="/withdraw"><i class="fas fa-money-bill-wave"></i> Withdraw Request</a></li>
+            <li><a href="/referral" class="active"><i class="fas fa-link"></i> Referral Link</a></li>
+            <li><a href="/support"><i class="fas fa-headset"></i> Support</a></li>
+            <li><a href="/logout" style="margin-top: auto; color: var(--color-red);"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
+        </ul>
+    </aside>
+
+    <main class="main-content">
+        <header class="top-header">
+            <div class="user-greeting"><h2>Referral Links</h2><p>Choose which leg you want to build</p></div>
+        </header>
+
+        <div class="dashboard-container">
+            <div class="card">
+                <div class="referral-container">
+                    
+                    <div class="ref-box">
+                        <div class="ref-label"><i class="fas fa-arrow-left" style="color:var(--color-green)"></i> Left Team Link</div>
+                        <div class="ref-link" id="leftLink">https://yourplatform.com/register/U100001?side=left</div>
+                        <button class="btn-copy" onclick="copyText('leftLink')">Copy Left Link</button>
+                    </div>
+
+                    <div class="ref-box">
+                        <div class="ref-label"><i class="fas fa-arrow-right" style="color:var(--color-orange)"></i> Right Team Link</div>
+                        <div class="ref-link" id="rightLink">https://yourplatform.com/register/U100001?side=right</div>
+                        <button class="btn-copy" onclick="copyText('rightLink')">Copy Right Link</button>
+                    </div>
+
+                </div>
+            </div>
+            
+            <p style="font-size: 13px; color: var(--text-muted); text-align: center;">
+                <i class="fas fa-info-circle"></i> Sharing the "Left" link will automatically place new signups on your left binary leg.
+            </p>
+        </div>
+    </main>
+
+    <script>
+        // 1. Fetch user info and update links
+        document.addEventListener("DOMContentLoaded", () => {
+            fetch('/api/user/info')
+                .then(res => res.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        const code = data.user_code;
+                        
+                        // Dynamically build the URLs using the user's code
+                        const leftLink = `${window.location.origin}/signup?ref=${code}&leg=left`;
+                        const rightLink = `${window.location.origin}/signup?ref=${code}&leg=right`;
+                        
+                        // Update the text in the boxes
+                        document.getElementById('leftLink').innerText = leftLink;
+                        document.getElementById('rightLink').innerText = rightLink;
+                    }
+                })
+                .catch(err => console.error("Error loading user info:", err));
+        });
+
+        // 2. Copy to Clipboard
+        function copyText(id) {
+            const text = document.getElementById(id).innerText;
+            navigator.clipboard.writeText(text).then(() => {
+                alert("Link copied!");
+            });
+        }
+
+        // 3. Logout
+        document.querySelector('a[href="/logout"]')?.addEventListener('click', function(e) {
+            e.preventDefault();
+            if (confirm("Are you sure you want to logout?")) {
+                localStorage.clear();
+                sessionStorage.clear();
+                window.location.href = "login.html"; 
+            }
+        });
+    </script>
+</body>
+</html>
