@@ -256,8 +256,7 @@
         }
 
         @media (max-width: 900px) {
-            #menuToggle { display: block !important; }
-            .sidebar { position: fixed; left: -260px; top: 0; height: 100vh; z-index: 1000; }
+            .sidebar { position: absolute; left: -260px; height: 100%; z-index: 100; }
             .sidebar.active { left: 0; }
             .main-content { width: 100%; }
             .top-header { padding: 16px 20px; }
@@ -289,14 +288,9 @@
 
     <main class="main-content">
         <header class="top-header">
-            <div class="user-greeting" style="display: flex; align-items: center; gap: 14px;">
-                <button id="menuToggle" style="background: none; border: none; font-size: 22px; color: var(--text-main); cursor: pointer; display: none; padding: 4px;">
-                    <i class="fas fa-bars"></i>
-                </button>
-                <div>
-                    <h2>My Profile</h2>
-                    <p>Manage your account information</p>
-                </div>
+            <div class="user-greeting">
+                <h2>My Profile</h2>
+                <p>Manage your account information</p>
             </div>
             <div class="header-actions">
                 <div class="notification"><i class="far fa-bell"></i></div>
@@ -317,6 +311,7 @@
                         <h3>{{ user_name }}</h3>
                         <p>USER ID : {{ user_code }}</p>
                         
+                        <!-- REPLACED OLD DUPLICATE BUTTON WITH HIDDEN INPUT AND PROPER TRIGGER BUTTON -->
                         <input type="file" id="profileUpload" accept="image/*" style="display: none;">
                         <button type="button" class="upload-btn" onclick="document.getElementById('profileUpload').click()">
                             <i class="fas fa-camera"></i> Change Photo
@@ -328,7 +323,7 @@
                     <div class="profile-stats-container" style="width: 100%;">
                         <div class="profile-stat">
                             <span>Status</span>
-                            <span id="user_status_badge">Loading...</span>
+                            <span style="color: var(--color-green);">Active</span>
                         </div>
                         <div class="profile-stat">
                             <span>Joined</span>
@@ -394,29 +389,15 @@
     </main>
 
     <script>
+    // 0. AUTO-LOAD DATA ON PAGE LOAD (Merged with Status Badge!)
     document.addEventListener("DOMContentLoaded", () => {
-        const menuToggle = document.getElementById('menuToggle');
-        const sidebar = document.getElementById('sidebar');
-
-        if (menuToggle && sidebar) {
-            menuToggle.addEventListener('click', function(e) {
-                e.stopPropagation();
-                sidebar.classList.toggle('active');
-            });
-
-            document.addEventListener('click', function(e) {
-                if (!sidebar.contains(e.target) && sidebar.classList.contains('active')) {
-                    sidebar.classList.remove('active');
-                }
-            });
-        }
-
         fetch('/api/profile/me')
             .then(res => res.json())
             .then(data => {
                 if(data.status === 'success') {
                     const p = data.data;
                     
+                    // Fill the form fields
                     document.getElementById('p_name').value = p.full_name || '';
                     document.getElementById('p_email').value = p.email || '';
                     document.getElementById('mobileInput').value = p.mobile || '';
@@ -425,6 +406,7 @@
                     document.getElementById('p_address').value = p.address || '';
                     document.getElementById('joinedLabel').innerText = p.joined_date || 'Unknown';
                     
+                    // 🌟 UPDATE 2: Handle the DB Status Badge! 🌟
                     let statusBadge = document.getElementById('user_status_badge'); 
                     if(statusBadge) {
                         if(p.is_active) {
@@ -438,6 +420,7 @@
             .catch(err => console.error("Error loading profile:", err));
     });
 
+    // 0.5 PROFILE PICTURE LIVE PREVIEW
     document.getElementById('profileUpload').addEventListener('change', function(event) {
         const file = event.target.files[0];
         if (file) {
@@ -450,6 +433,7 @@
         }
     });
 
+    // 1. MOBILE NUMBER VALIDATION
     const mobileInput = document.getElementById('mobileInput');
     const mobileGroup = document.getElementById('mobileGroup');
     const mobileError = document.getElementById('mobileError');
@@ -465,6 +449,7 @@
         }
     });
 
+    // 2. ID NUMBER VALIDATION
     const aadharInput = document.getElementById('aadharInput');
     const aadharError = document.getElementById('aadharError');
 
@@ -479,6 +464,7 @@
         }
     });
 
+    // 3. TAX CARD VALIDATION
     const panInput = document.getElementById('panInput');
     const panError = document.getElementById('panError');
 
@@ -497,6 +483,7 @@
         }
     });
 
+    // 4. SUBMIT FORM TO DATABASE
     document.getElementById('profileForm').addEventListener('submit', function(e) {
         e.preventDefault(); 
         
@@ -542,6 +529,7 @@
         });
     });
 
+    // 5. Clean Logout
     document.querySelector('a[href="/logout"]')?.addEventListener('click', function(e) {
         e.preventDefault();
         if (confirm("Are you sure you want to logout?")) {
