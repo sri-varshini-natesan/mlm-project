@@ -2,17 +2,42 @@ import mysql.connector
 from mysql.connector import Error
 from mysql.connector import pooling
 import random
+import os
+from urllib.parse import urlparse
+
+# 🌟 PRODUCTION DATABASE TUNNEL PARSER 🌟
+mysql_url = os.environ.get("MYSQL_URL")
 
 try:
-    db_pool = mysql.connector.pooling.MySQLConnectionPool(
-        pool_name="mlm_pool",
-        pool_size=32,
-        pool_reset_session=True,
-        host='localhost',
-        database='mlm_database',
-        user='root',
-        password=''  # Empty for XAMPP default
-    )
+    if mysql_url:
+        # Parse the cloud connection string into readable parameters safely
+        url = urlparse(mysql_url)
+        db_config = {
+            'host': url.hostname,
+            'port': url.port or 3306,
+            'user': url.username,
+            'password': url.password,
+            'database': url.path[1:]
+        }
+        
+        # Instantiate the pool passing the parsed cloud configurations explicitly
+        db_pool = mysql.connector.pooling.MySQLConnectionPool(
+            pool_name="mlm_pool",
+            pool_size=32,
+            pool_reset_session=True,
+            **db_config
+        )
+    else:
+        # Fallback parameters for local machine XAMPP environment testing
+        db_pool = mysql.connector.pooling.MySQLConnectionPool(
+            pool_name="mlm_pool",
+            pool_size=32,
+            pool_reset_session=True,
+            host='localhost',
+            database='mlm_database',
+            user='root',
+            password='' 
+        )
     print("Database Connection Pool initialized successfully.")
 except Error as e:
     print(f"Failed to initialize Connection Pool: {e}")
@@ -25,7 +50,7 @@ def get_db_connection():
     except Error as e:
         print(f"Pool exhaustion error: {e}")
         return None
-
+        
 def find_user_by_user_code(user_code):
     db = get_db_connection()
     if not db: return None
