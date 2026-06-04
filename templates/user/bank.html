@@ -87,7 +87,15 @@
         .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(67, 24, 255, 0.3); }
 
         @media (max-width: 1024px) { .bank-grid { grid-template-columns: 1fr; } }
-        @media (max-width: 900px) { .sidebar { position: absolute; left: -260px; height: 100%; z-index: 100; } .main-content { width: 100%; } }
+        
+        /* 🌟 FIXED THE SIDEPANEL NAVIGATION DRAWER BREAKPOINTS BELOW 🌟 */
+        @media (max-width: 900px) { 
+            #menuToggle { display: block !important; }
+            .sidebar { position: fixed; left: -260px; top: 0; height: 100vh; z-index: 1000; } 
+            .sidebar.active { left: 0; } 
+            .main-content { width: 100%; } 
+            .top-header { padding: 16px 20px; } 
+        }
         @media (max-width: 600px) { .form-grid { grid-template-columns: 1fr; } }
     </style>
 </head>
@@ -107,11 +115,30 @@
         </ul>
     </aside>
 
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">USER PANEL</div>
+        <ul class="sidebar-menu">
+            <li><a href="/"><i class="fas fa-home"></i> Dashboard</a></li>
+            <li><a href="/profile"><i class="fas fa-user"></i> Profile</a></li>
+            <li><a href="/courses"><i class="fas fa-graduation-cap"></i> My Courses</a></li>
+            <li><a href="/bank" class="active"><i class="fas fa-university"></i> Bank Details</a></li>
+            <li><a href="/withdraw"><i class="fas fa-money-bill-wave"></i> Withdraw Request</a></li>
+            <li><a href="/referral"><i class="fas fa-link"></i> Referral Link</a></li>
+            <li><a href="/support"><i class="fas fa-headset"></i> Support</a></li>
+            <li><a href="/logout" style="margin-top: auto; color: var(--color-red);"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
+        </ul>
+    </aside>
+
     <main class="main-content">
         <header class="top-header">
-            <div class="user-greeting">
-                <h2>Bank Details</h2>
-                <p>Manage your withdrawal accounts safely</p>
+            <div class="user-greeting" style="display: flex; align-items: center; gap: 14px;">
+                <button id="menuToggle" style="background: none; border: none; font-size: 22px; color: var(--text-main); cursor: pointer; display: none; padding: 4px;">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <div>
+                    <h2>Bank Details</h2>
+                    <p>Manage your withdrawal accounts safely</p>
+                </div>
             </div>
             <div class="header-actions">
                 <div class="notification"><i class="far fa-bell"></i></div>
@@ -240,6 +267,23 @@
 
         // Auto-load data on page entry
         document.addEventListener("DOMContentLoaded", () => {
+            // 🌟 ATTACH NAVIGATION INTERACTIVE EVENT LISTENERS TO SLIDE SIDEPANELS 🌟
+            const menuToggle = document.getElementById('menuToggle');
+            const sidebar = document.getElementById('sidebar');
+
+            if (menuToggle && sidebar) {
+                menuToggle.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    sidebar.classList.toggle('active');
+                });
+
+                document.addEventListener('click', function(e) {
+                    if (!sidebar.contains(e.target) && sidebar.classList.contains('active')) {
+                        sidebar.classList.remove('active');
+                    }
+                });
+            }
+
             fetch('/api/bank/me')
                 .then(res => res.json())
                 .then(data => {
