@@ -27,7 +27,7 @@
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
         body { background-color: var(--bg-color); color: var(--text-main); display: flex; min-height: 100vh; overflow-x: hidden; }
 
-        /* --- SIDEBAR & MAIN CONTENT (Same as before) --- */
+        /* --- SIDEBAR & MAIN CONTENT --- */
         .sidebar { width: 260px; background-color: var(--sidebar-bg); color: white; display: flex; flex-direction: column; transition: var(--transition); flex-shrink: 0; z-index: 100; }
         .sidebar-header { padding: 30px 24px; font-size: 20px; font-weight: 800; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.05); letter-spacing: 1px; color: #ffffff; }
         .sidebar-menu { list-style: none; padding: 24px 0; flex: 1; }
@@ -51,7 +51,14 @@
         .btn-copy { background: var(--color-blue); color: white; border: none; padding: 12px 24px; border-radius: 10px; font-weight: 800; cursor: pointer; transition: var(--transition); }
         .btn-copy:hover { background: #3513cc; }
 
-        @media (max-width: 900px) { .referral-container { grid-template-columns: 1fr; } }
+        @media (max-width: 900px) { 
+            #menuToggle { display: block !important; }
+            .sidebar { position: fixed; left: -260px; top: 0; height: 100vh; z-index: 1000; } 
+            .sidebar.active { left: 0; } 
+            .main-content { width: 100%; } 
+            .top-header { padding: 16px 20px; } 
+            .referral-container { grid-template-columns: 1fr; } 
+        }
     </style>
 </head>
 <body>
@@ -72,7 +79,15 @@
 
     <main class="main-content">
         <header class="top-header">
-            <div class="user-greeting"><h2>Referral Links</h2><p>Choose which leg you want to build</p></div>
+            <div class="user-greeting" style="display: flex; align-items: center; gap: 14px;">
+                <button id="menuToggle" style="background: none; border: none; font-size: 22px; color: var(--text-main); cursor: pointer; display: none; padding: 4px;">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <div>
+                    <h2>Referral Links</h2>
+                    <p>Choose which leg you want to build</p>
+                </div>
+            </div>
         </header>
 
         <div class="dashboard-container">
@@ -101,19 +116,31 @@
     </main>
 
     <script>
-        // 1. Fetch user info and update links
         document.addEventListener("DOMContentLoaded", () => {
+            const menuToggle = document.getElementById('menuToggle');
+            const sidebar = document.getElementById('sidebar');
+
+            if (menuToggle && sidebar) {
+                menuToggle.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    sidebar.classList.toggle('active');
+                });
+
+                document.addEventListener('click', function(e) {
+                    if (!sidebar.contains(e.target) && sidebar.classList.contains('active')) {
+                        sidebar.classList.remove('active');
+                    }
+                });
+            }
+
             fetch('/api/user/info')
                 .then(res => res.json())
                 .then(data => {
                     if (data.status === 'success') {
                         const code = data.user_code;
-                        
-                        // Dynamically build the URLs using the user's code
                         const leftLink = `${window.location.origin}/signup?ref=${code}&leg=left`;
                         const rightLink = `${window.location.origin}/signup?ref=${code}&leg=right`;
                         
-                        // Update the text in the boxes
                         document.getElementById('leftLink').innerText = leftLink;
                         document.getElementById('rightLink').innerText = rightLink;
                     }
@@ -121,7 +148,6 @@
                 .catch(err => console.error("Error loading user info:", err));
         });
 
-        // 2. Copy to Clipboard
         function copyText(id) {
             const text = document.getElementById(id).innerText;
             navigator.clipboard.writeText(text).then(() => {
@@ -129,13 +155,12 @@
             });
         }
 
-        // 3. Logout
         document.querySelector('a[href="/logout"]')?.addEventListener('click', function(e) {
             e.preventDefault();
             if (confirm("Are you sure you want to logout?")) {
                 localStorage.clear();
                 sessionStorage.clear();
-                window.location.href = "login.html"; 
+                window.location.href = "/logout"; 
             }
         });
     </script>
