@@ -15,6 +15,93 @@ from apscheduler.schedulers.background import BackgroundScheduler
 import notification
 
 app = Flask(__name__)
+# 🌟 AUTOMATED DATABASE TABLE INITIALIZER 🌟
+# This runs automatically on boot to construct your cloud database tables
+def initialize_cloud_database():
+    from db_config import get_db_connection
+    conn = get_db_connection()
+    if not conn:
+        print("❌ Database setup deferred: Connection pool unavailable.")
+        return
+    try:
+        cursor = conn.cursor()
+        print("🛠️ Constructing cloud tables inside the 'railway' database...")
+        
+        # 1. Create Users Table
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS users (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            full_name VARCHAR(255) NOT NULL,
+            email VARCHAR(255) UNIQUE NOT NULL,
+            user_code VARCHAR(50) UNIQUE NOT NULL,
+            dob DATE,
+            gender VARCHAR(20),
+            aadhar_no VARCHAR(50),
+            pan_no VARCHAR(50),
+            mobile VARCHAR(20),
+            password VARCHAR(255) NOT NULL,
+            sponsor_id INT,
+            leg VARCHAR(20),
+            address TEXT,
+            profile_img VARCHAR(255),
+            is_active BOOLEAN DEFAULT FALSE,
+            bank_acc_name VARCHAR(255),
+            bank_acc_no VARCHAR(100),
+            bank_ifsc VARCHAR(50),
+            upi_id VARCHAR(100),
+            upi_mobile VARCHAR(20),
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+        """)
+
+        # 2. Create User Courses Table
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS user_courses (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            user_id INT,
+            course_name VARCHAR(255) NOT NULL,
+            course_category VARCHAR(255) DEFAULT 'General Education',
+            course_price DECIMAL(15, 2) NOT NULL,
+            remaining_days INT DEFAULT 212,
+            status VARCHAR(50) DEFAULT 'ACTIVE',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+        """)
+
+        # 3. Create Withdrawals Table
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS withdrawals (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            user_id INT,
+            request_amount DECIMAL(15, 2) NOT NULL,
+            tds_deduction DECIMAL(15, 2) DEFAULT 0.00,
+            net_payable DECIMAL(15, 2) NOT NULL,
+            status VARCHAR(50) DEFAULT 'PENDING',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            processed_at TIMESTAMP NULL DEFAULT NULL
+        );
+        """)
+
+        # 4. Insert or Update the Active Demo User 'JOHN'
+        cursor.execute("SELECT id FROM users WHERE user_code = 'JOHN'")
+        if not cursor.fetchone():
+            cursor.execute("""
+            INSERT INTO users (full_name, email, user_code, password, is_active) 
+            VALUES ('JOHN DOE', 'john@demo.com', 'JOHN', 'John@2026', 1)
+            """)
+        else:
+            cursor.execute("UPDATE users SET is_active = 1 WHERE user_code = 'JOHN'")
+
+        conn.commit()
+        print("🚀 Cloud database tables and active 'JOHN' profile verified successfully!")
+    except Exception as e:
+        print(f"❌ Initialization error: {e}")
+    finally:
+        cursor.close()
+        conn.close()
+
+# Invoke the verification function immediately on server startup
+initialize_cloud_database()
 app.secret_key = 'mlm_super_secure_key_123' 
 
 UPLOAD_FOLDER = 'static/uploads/kyc'
