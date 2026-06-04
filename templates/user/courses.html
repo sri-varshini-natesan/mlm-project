@@ -29,18 +29,14 @@
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
         body { background-color: var(--bg-color); color: var(--text-main); display: flex; min-height: 100vh; overflow-x: hidden; }
 
-        /* --- SIDEBAR --- */
-        .sidebar { width: 260px; background-color: var(--sidebar-bg); color: white; display: flex; flex-direction: column; flex-shrink: 0; z-index: 100; }
+        .sidebar { width: 260px; background-color: var(--sidebar-bg); color: white; display: flex; flex-direction: column; flex-shrink: 0; z-index: 100; transition: var(--transition); }
         .sidebar-header { padding: 30px 24px; font-size: 20px; font-weight: 800; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.05); letter-spacing: 1px; color: #ffffff; }
         .sidebar-menu { list-style: none; padding: 24px 0; flex: 1; }
         .sidebar-menu li a { display: flex; align-items: center; padding: 16px 30px; color: #8f9bba; text-decoration: none; font-weight: 600; font-size: 15px; transition: var(--transition); }
         .sidebar-menu li a:hover, .sidebar-menu li a.active { background-color: var(--sidebar-hover); color: white; border-right: 4px solid var(--color-blue); }
         .sidebar-menu li a i { width: 24px; margin-right: 14px; font-size: 18px; }
 
-        /* --- MAIN CONTENT --- */
         .main-content { flex: 1; display: flex; flex-direction: column; overflow-y: auto; overflow-x: hidden; width: calc(100% - 260px); }
-
-        /* --- TOP HEADER --- */
         .top-header { background-color: var(--card-bg); padding: 16px 32px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); position: sticky; top: 0; z-index: 50; }
         .user-greeting h2 { font-size: 20px; color: var(--text-main); font-weight: 800; }
         .user-greeting p { font-size: 13px; color: var(--text-muted); font-weight: 600; margin-top: 2px; }
@@ -48,14 +44,11 @@
         .user-profile { display: flex; align-items: center; gap: 12px; cursor: pointer; }
         .user-profile img { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; border: 2px solid var(--border-color); }
 
-        /* --- DASHBOARD CONTAINER --- */
-        .dashboard-container { padding: 32px; max-width: 100%; }
+        .dashboard-container { padding: 32px; }
         .page-header-flex { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; }
         .page-title { font-size: 24px; font-weight: 800; color: var(--text-main); }
-        
         .info-badge { background: rgba(67, 24, 255, 0.05); color: var(--color-blue); padding: 10px 16px; border-radius: 12px; font-size: 12px; font-weight: 700; display: flex; align-items: center; gap: 8px; border: 1px solid rgba(67, 24, 255, 0.1); }
 
-        /* --- COURSE SECTIONS --- */
         .course-section { margin-bottom: 48px; }
         .section-title { font-size: 18px; font-weight: 800; color: var(--text-main); margin-bottom: 20px; display: flex; align-items: center; text-transform: uppercase; letter-spacing: 0.5px; }
         .section-title::before { content: ''; display: inline-block; width: 4px; height: 20px; border-radius: 4px; margin-right: 12px; }
@@ -64,8 +57,6 @@
         .title-advanced::before { background-color: var(--color-orange); }
 
         .course-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 24px; }
-
-        /* --- COURSE CARDS --- */
         .course-card { background-color: var(--card-bg); border-radius: 20px; border: 1px solid var(--border-color); box-shadow: var(--shadow); padding: 24px; display: flex; flex-direction: column; transition: var(--transition); position: relative; overflow: hidden; }
         .course-card:hover { transform: translateY(-5px); box-shadow: var(--shadow-hover); }
         .course-card.active-card { border-color: rgba(5, 205, 153, 0.4); background: linear-gradient(180deg, #ffffff 0%, rgba(5, 205, 153, 0.03) 100%); }
@@ -83,17 +74,21 @@
         .course-title { font-size: 18px; font-weight: 800; color: var(--text-main); margin-bottom: 8px; }
         .course-price { font-size: 28px; font-weight: 900; color: var(--text-main); margin-bottom: 24px; letter-spacing: -0.5px; }
 
-        /* --- BUTTONS --- */
         .card-footer { margin-top: auto; border-top: 1px solid var(--border-color); padding-top: 20px; }
         .btn { width: 100%; padding: 14px; border-radius: 12px; font-size: 14px; font-weight: 800; text-align: center; cursor: pointer; border: none; transition: var(--transition); display: flex; justify-content: center; align-items: center; gap: 8px; }
-        
         .btn-purchase { background-color: var(--input-bg); color: var(--color-blue); border: 1px solid rgba(67, 24, 255, 0.1); }
         .btn-purchase:hover { background-color: var(--color-blue); color: white; box-shadow: 0 6px 15px rgba(67, 24, 255, 0.2); }
-        
-        .btn-view-app { background-color: var(--color-green); color: white; box-shadow: 0 6px 15px rgba(5, 205, 153, 0.2); cursor: not-allowed; }
+        .btn-view-app { background-color: var(--color-green); color: white; cursor: not-allowed; }
         .btn-disabled { background-color: #e9edf7; color: #a3aed1; cursor: not-allowed; }
 
-        @media (max-width: 900px) { .sidebar { position: absolute; left: -260px; height: 100%; z-index: 100; } .sidebar.active { left: 0; } .main-content { width: 100%; } .page-header-flex { flex-direction: column; align-items: flex-start; gap: 16px; } }
+        @media (max-width: 900px) {
+            #menuToggle { display: block !important; }
+            .sidebar { position: fixed; left: -260px; top: 0; height: 100vh; z-index: 1000; }
+            .sidebar.active { left: 0; }
+            .main-content { width: 100%; }
+            .top-header { padding: 16px 20px; }
+            .page-header-flex { flex-direction: column; align-items: flex-start; gap: 16px; }
+        }
     </style>
 </head>
 <body>
@@ -114,9 +109,14 @@
 
     <main class="main-content">
         <header class="top-header">
-            <div class="user-greeting">
-                <h2>My Courses</h2>
-                <p>View and upgrade your educational packages</p>
+            <div class="user-greeting" style="display: flex; align-items: center; gap: 14px;">
+                <button id="menuToggle" style="background: none; border: none; font-size: 22px; color: var(--text-main); cursor: pointer; display: none; padding: 4px;">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <div>
+                    <h2>My Courses</h2>
+                    <p>View and upgrade your educational packages</p>
+                </div>
             </div>
             <div class="header-actions">
                 <div class="user-profile">
@@ -204,10 +204,14 @@
     </main>
 
     <script>
-        // ==========================================
-        // 🔔 TOAST NOTIFICATION FALLBACK CONTAINER
-        // ==========================================
         document.addEventListener("DOMContentLoaded", () => {
+            const menuToggle = document.getElementById('menuToggle');
+            const sidebar = document.getElementById('sidebar');
+            if (menuToggle && sidebar) {
+                menuToggle.addEventListener('click', e => { e.stopPropagation(); sidebar.classList.toggle('active'); });
+                document.addEventListener('click', e => { if (!sidebar.contains(e.target) && sidebar.classList.contains('active')) sidebar.classList.remove('active'); });
+            }
+
             if (!document.getElementById('custom-toast-container')) {
                 const toastContainer = document.createElement('div');
                 toastContainer.id = 'custom-toast-container';
@@ -242,140 +246,80 @@
             }
         }
 
-        // ==========================================
-        // 🌟 LOAD AND MATCH USER OWNED PACKAGES 🌟
-        // ==========================================
         function loadUserPackages() {
             fetch('/api/courses/my-packages')
                 .then(res => res.json())
                 .then(data => {
                     if (data.status === 'success') {
                         const ownedCourses = data.packages || [];
-                        const highestPrice = parseFloat(data.highest_price || 0); // 🌟 Grab the highest price limit
+                        const highestPrice = parseFloat(data.highest_price || 0);
                         
                         document.querySelectorAll('.course-card').forEach(card => {
                             const titleEl = card.querySelector('.course-title');
                             const courseName = titleEl ? titleEl.innerText.trim() : '';
-                            const priceAttr = card.getAttribute('data-price') || "0";
-                            const coursePrice = parseFloat(priceAttr);
-                            
+                            const coursePrice = parseFloat(card.getAttribute('data-price') || "0");
                             const badge = card.querySelector('.badge');
                             const button = card.querySelector('.btn');
                             
                             if (ownedCourses.includes(courseName)) {
-                                // 1. Active course owned by user
                                 card.classList.add('active-card');
-                                if (badge) {
-                                    badge.innerText = "Active";
-                                    badge.className = "badge badge-active";
-                                }
-                                if (button) {
-                                    button.innerText = "Active / Enrolled";
-                                    button.className = "btn btn-view-app";
-                                    button.disabled = true;
-                                    button.onclick = null;
-                                }
+                                if (badge) { badge.innerText = "Active"; badge.className = "badge badge-active"; }
+                                if (button) { button.innerText = "Active / Enrolled"; button.className = "btn btn-view-app"; button.disabled = true; button.onclick = null; }
                             } else if (coursePrice < highestPrice) {
-                                // 🌟 2. NEW FRONTEND DOWNGRADE LOCKER 🌟
                                 if (badge) {
-                                    badge.innerText = "Locked";
-                                    badge.className = "badge badge-inactive";
-                                    badge.style.color = "var(--color-red)";
-                                    badge.style.background = "rgba(238, 93, 80, 0.05)";
-                                    badge.style.border = "1px solid rgba(238, 93, 80, 0.1)";
+                                    badge.innerText = "Locked"; badge.className = "badge badge-inactive";
+                                    badge.style.color = "var(--color-red)"; badge.style.background = "rgba(238, 93, 80, 0.05)"; badge.style.border = "1px solid rgba(238, 93, 80, 0.1)";
                                 }
-                                if (button) {
-                                    button.innerText = "Downgrade Blocked";
-                                    button.className = "btn btn-disabled"; // Applies your structural grey layout styles
-                                    button.disabled = true;
-                                    button.onclick = null;
-                                }
+                                if (button) { button.innerText = "Downgrade Blocked"; button.className = "btn btn-disabled"; button.disabled = true; button.onclick = null; }
                             } else {
-                                // 3. Available higher-tier upgrades
                                 if (badge) {
-                                    badge.innerText = "Available";
-                                    badge.className = "badge badge-inactive";
-                                    badge.style.color = "var(--color-blue)";
-                                    badge.style.background = "rgba(67, 24, 255, 0.05)";
-                                    badge.style.border = "1px solid rgba(67, 24, 255, 0.1)";
+                                    badge.innerText = "Available"; badge.className = "badge badge-inactive";
+                                    badge.style.color = "var(--color-blue)"; badge.style.background = "rgba(67, 24, 255, 0.05)"; badge.style.border = "1px solid rgba(67, 24, 255, 0.1)";
                                 }
                                 if (button) {
-                                    button.innerText = "Purchase";
-                                    button.className = "btn btn-purchase";
-                                    button.disabled = false;
-                                    button.onclick = function() {
-                                        executeCoursePurchase(courseName, coursePrice, card);
-                                    };
+                                    button.innerText = "Purchase"; button.className = "btn btn-purchase"; button.disabled = false;
+                                    button.onclick = () => executeCoursePurchase(courseName, coursePrice, card);
                                 }
                             }
                         });
                     }
                 })
-                .catch(err => {
-                    console.error("Error coordinating owned packages:", err);
-                    sendUiNotification("System Error", "Failed to communicate with course catalog servers.", true);
-                });
+                .catch(err => console.error("Error loading packages:", err));
         }
 
-        // ==========================================
-        // 🚀 LIVE COURSE ACTIVATION HANDLER 🚀
-        // ==========================================
         function executeCoursePurchase(name, price, cardElement) {
             const button = cardElement.querySelector('.btn');
             const origText = button.innerText;
-            
-            button.innerText = "Activating...";
-            button.disabled = true;
+            button.innerText = "Activating..."; button.disabled = true;
 
             fetch('/api/courses/purchase', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    course_name: name,
-                    course_price: price
-                })
+                body: JSON.stringify({ course_name: name, course_price: price })
             })
             .then(res => res.json())
             .then(data => {
                 if (data.status === 'success') {
-                    // Trigger boss's specific success message structure via the UI engine
                     sendUiNotification("Activation Confirmed!", data.message);
-                    
-                    // Instantly shift the local UI block structure elements on success response
                     cardElement.classList.add('active-card');
                     const badge = cardElement.querySelector('.badge');
-                    if (badge) {
-                        badge.innerText = "Active";
-                        badge.className = "badge badge-active";
-                        badge.style.color = ""; badge.style.background = ""; badge.style.border = "";
-                    }
-                    button.innerText = "Active / Enrolled";
-                    button.className = "btn btn-view-app";
-                    button.disabled = true;
-                    button.onclick = null;
+                    if (badge) { badge.innerText = "Active"; badge.className = "badge badge-active"; badge.style.color = ""; badge.style.background = ""; badge.style.border = ""; }
+                    button.innerText = "Active / Enrolled"; button.className = "btn btn-view-app"; button.disabled = true; button.onclick = null;
                 } else {
                     sendUiNotification("Purchase Refused", data.message, true);
-                    button.innerText = origText;
-                    button.disabled = false;
+                    button.innerText = origText; button.disabled = false;
                 }
             })
             .catch(err => {
-                console.error("Purchase processing transaction fault:", err);
-                sendUiNotification("Network Failure", "Could not submit payment tokens to the pipeline endpoint.", true);
-                button.innerText = origText;
-                button.disabled = false;
+                sendUiNotification("Network Failure", "Transaction aborted.", true);
+                button.innerText = origText; button.disabled = false;
             });
         }
 
-        // ==========================================
-        // 🚪 CLEAN LOGOUT INTERACTION GATEWAY
-        // ==========================================
         document.querySelector('a[href="/logout"]')?.addEventListener('click', function(e) {
             e.preventDefault();
             if (confirm("Are you sure you want to logout?")) {
-                localStorage.clear();
-                sessionStorage.clear();
-                window.location.href = "/logout"; 
+                localStorage.clear(); sessionStorage.clear(); window.location.href = "/logout"; 
             }
         });
     </script>
