@@ -24,10 +24,10 @@
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
-        body { background-color: var(--bg-color); color: var(--text-main); display: flex; min-height: 100vh; }
+        body { background-color: var(--bg-color); color: var(--text-main); display: flex; min-height: 100vh; overflow-x: hidden; }
 
         /* --- SIDEBAR & LAYOUT --- */
-        .sidebar { width: 260px; background-color: var(--sidebar-bg); color: white; display: flex; flex-direction: column; transition: var(--transition); flex-shrink: 0; }
+        .sidebar { width: 260px; background-color: var(--sidebar-bg); color: white; display: flex; flex-direction: column; transition: var(--transition); flex-shrink: 0; z-index: 100; }
         .sidebar-header { padding: 30px 24px; font-size: 20px; font-weight: 800; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.05); color: #ffffff; }
         .sidebar-menu { list-style: none; padding: 24px 0; flex: 1; }
         .sidebar-menu li a { display: flex; align-items: center; padding: 16px 30px; color: #8f9bba; text-decoration: none; font-weight: 600; font-size: 15px; transition: var(--transition); }
@@ -35,7 +35,7 @@
         .sidebar-menu li a i { width: 24px; margin-right: 14px; font-size: 18px; }
 
         .main-content { flex: 1; display: flex; flex-direction: column; width: calc(100% - 260px); }
-        .top-header { background-color: var(--card-bg); padding: 20px 32px; border-bottom: 1px solid var(--border-color); }
+        .top-header { background-color: var(--card-bg); padding: 20px 32px; border-bottom: 1px solid var(--border-color); position: sticky; top: 0; z-index: 50; }
         
         /* --- SUPPORT LAYOUT --- */
         .dashboard-container { padding: 40px; display: flex; justify-content: center; align-items: center; height: 100%; }
@@ -62,12 +62,19 @@
         .btn-mail { background: var(--color-blue); color: white; }
         .btn-action:hover { opacity: 0.9; }
 
-        @media (max-width: 768px) { .contact-wrapper { grid-template-columns: 1fr; } }
+        @media (max-width: 900px) { 
+            #menuToggle { display: block !important; }
+            .sidebar { position: fixed; left: -260px; top: 0; height: 100vh; z-index: 1000; } 
+            .sidebar.active { left: 0; } 
+            .main-content { width: 100%; } 
+            .top-header { padding: 16px 20px; } 
+            .contact-wrapper { grid-template-columns: 1fr; } 
+        }
     </style>
 </head>
 <body>
 
-    <aside class="sidebar">
+    <aside class="sidebar" id="sidebar">
         <div class="sidebar-header">USER PANEL</div>
         <ul class="sidebar-menu">
             <li><a href="/"><i class="fas fa-home"></i> Dashboard</a></li>
@@ -83,7 +90,14 @@
 
     <main class="main-content">
         <header class="top-header">
-            <h2>Support Center</h2>
+            <div class="user-greeting" style="display: flex; align-items: center; gap: 14px;">
+                <button id="menuToggle" style="background: none; border: none; font-size: 22px; color: var(--text-main); cursor: pointer; display: none; padding: 4px;">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <div>
+                    <h2>Support Center</h2>
+                </div>
+            </div>
         </header>
 
         <div class="dashboard-container">
@@ -102,17 +116,33 @@
             </div>
         </div>
     </main>
+
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            const logoutBtn = document.querySelector('a[href="#logout"]');
-            
+            const menuToggle = document.getElementById('menuToggle');
+            const sidebar = document.getElementById('sidebar');
+
+            if (menuToggle && sidebar) {
+                menuToggle.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    sidebar.classList.toggle('active');
+                });
+
+                document.addEventListener('click', function(e) {
+                    if (!sidebar.contains(e.target) && sidebar.classList.contains('active')) {
+                        sidebar.classList.remove('active');
+                    }
+                });
+            }
+
+            const logoutBtn = document.querySelector('a[href="/logout"]');
             if (logoutBtn) {
                 logoutBtn.addEventListener('click', function(e) {
                     e.preventDefault();
                     if (confirm("Are you sure you want to logout?")) {
                         localStorage.clear();
                         sessionStorage.clear();
-                        window.location.href = "login.html"; 
+                        window.location.href = "/logout"; 
                     }
                 });
             }
