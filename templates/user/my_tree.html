@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Tree - User Panel</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --bg-color: #f8f9fc;
+            --sidebar-bg: #0b1437;
+            --sidebar-hover: rgba(255, 255, 255, 0.08);
+            --card-bg: #ffffff;
+            --text-main: #1b2559;
+            --text-muted: #8f9bba;
+            --color-green: #05cd99;
+            --color-blue: #1a73e8;   
+            --color-purple: #9c27b0; 
+            --color-orange: #ff9800; 
+            --color-red: #e63946;    
+            --border-color: #e9edf7;
+            --input-bg: #f4f7fe;
+            --shadow: 0 10px 30px rgba(11, 20, 55, 0.03);
+            --shadow-hover: 0 15px 35px rgba(11, 20, 55, 0.08);
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
+        body { background-color: var(--bg-color); color: var(--text-main); display: flex; min-height: 100vh; overflow-x: hidden; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* --- SIDEBAR --- */
+        .sidebar { width: 260px; background-color: var(--sidebar-bg); color: white; display: flex; flex-direction: column; transition: var(--transition); flex-shrink: 0; z-index: 100; }
+        .sidebar-header { padding: 30px 24px; font-size: 20px; font-weight: 800; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.05); letter-spacing: 1px; color: #ffffff; }
+        .sidebar-menu { list-style: none; padding: 24px 0; flex: 1; }
+        .sidebar-menu li a { display: flex; align-items: center; padding: 16px 30px; color: #8f9bba; text-decoration: none; font-weight: 600; font-size: 15px; transition: var(--transition); }
+        .sidebar-menu li a:hover, .sidebar-menu li a.active { background-color: var(--sidebar-hover); color: white; border-right: 4px solid var(--color-blue); }
+        .sidebar-menu li a i { width: 24px; margin-right: 14px; font-size: 18px; }
+
+        /* --- MAIN CONTENT --- */
+        .main-content { flex: 1; display: flex; flex-direction: column; overflow-y: auto; overflow-x: hidden; width: calc(100% - 260px); position: relative; }
+
+        /* --- TOP HEADER --- */
+        .top-header { background-color: var(--card-bg); padding: 16px 32px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); position: sticky; top: 0; z-index: 50; }
+        .user-greeting h2 { font-size: 20px; color: var(--text-main); font-weight: 800; }
+        .user-greeting p { font-size: 13px; color: var(--text-muted); font-weight: 600; margin-top: 2px; }
+        .header-actions { display: flex; align-items: center; gap: 24px; }
+        .user-profile { display: flex; align-items: center; gap: 12px; cursor: pointer; }
+        .user-profile img { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; border: 2px solid var(--border-color); }
+
+        .dashboard-container { padding: 32px; max-width: 100%; animation: fadeIn 0.5s ease-out forwards; }
+        .section-title { font-size: 15px; font-weight: 800; margin-bottom: 24px; color: var(--text-main); text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; justify-content: space-between;}
+        
+        .title-left { display: flex; align-items: center; }
+        .title-left::before { content: ''; display: inline-block; width: 4px; height: 18px; background-color: var(--color-blue); border-radius: 4px; margin-right: 12px; }
+
+        /* --- MODERN CARD-BASED TREE VIEW --- */
+        .tree-section { background-color: var(--card-bg); border-radius: 20px; border: 1px solid var(--border-color); box-shadow: var(--shadow); padding: 28px; width: 100%; margin-bottom: 32px; }
+        .tree-container { display: flex; flex-direction: column; align-items: stretch; gap: 24px; }
+        .tree-wrapper { flex: 1; overflow-x: auto; text-align: center; padding-bottom: 20px; }
+
+        .tree { display: inline-block; white-space: nowrap; }
+        .tree ul { padding-top: 24px; position: relative; display: flex; justify-content: center; padding-left: 0; margin: 0; }
+        .tree li { list-style-type: none; position: relative; padding: 24px 12px 0 12px; text-align: center; }
+
+        .tree li::before, .tree li::after { content: ''; position: absolute; top: 0; right: 50%; border-top: 2px solid #cbd5e1; width: 50%; height: 24px; }
+        .tree li::after { right: auto; left: 50%; border-left: 2px solid #cbd5e1; }
+        .tree li:only-child { padding-top: 0; } 
+        .tree li:only-child::after, .tree li:only-child::before { display: none; }
+        .tree li:first-child::before, .tree li:last-child::after { border: 0 none; }
+        .tree li:first-child::after { border-radius: 6px 0 0 0; }
+        .tree li:last-child::before { border-right: 2px solid #cbd5e1; border-radius: 0 6px 0 0; }
+        .tree ul ul::before { content: ''; position: absolute; top: 0; left: 50%; border-left: 2px solid #cbd5e1; width: 0; height: 24px; transform: translateX(-50%); }
+
+        .tree-card {
+            background: #ffffff; border-radius: 12px; padding: 16px 24px; min-width: 150px;
+            display: inline-flex; flex-direction: column; align-items: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; position: relative; z-index: 2; transition: var(--transition); text-decoration: none;
+            cursor: pointer;
+        }
+        .tree-card:hover { transform: translateY(-5px) scale(1.02); box-shadow: 0 12px 30px rgba(26, 115, 232, 0.15); border-color: var(--color-blue); }
+        .tree-card.root-card { border: 2px solid #1a73e8; box-shadow: 0 4px 20px rgba(26, 115, 232, 0.15); }
+        .tree-card.empty-node { cursor: default; }
+        .tree-card.empty-node:hover { transform: none; box-shadow: none; border-color: #e2e8f0; }
+
+        .tree-avatar { width: 50px; height: 50px; border-radius: 50%; object-fit: cover; margin-bottom: 12px; border: 2px solid #f8f9fc; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .tree-avatar-placeholder { width: 50px; height: 50px; border-radius: 50%; background: #e2e8f0; color: #64748b; display: flex; justify-content: center; align-items: center; font-size: 20px; margin-bottom: 12px; }
+        
+        .tree-name { font-size: 14px; font-weight: 800; color: #1e293b; margin-bottom: 4px; }
+        .tree-id { font-size: 12px; font-weight: 600; color: #3b82f6; margin-bottom: 10px; }
+        .tree-status { font-size: 11px; font-weight: 800; }
+        .status-active { color: #05cd99; }
+        .status-inactive { color: #e63946; }
+
+        .tree-footer { display: flex; justify-content: space-between; align-items: flex-end; margin-top: 16px; border-top: 1px solid #e2e8f0; padding-top: 24px; flex-wrap: wrap; gap: 20px; }
+        .tree-legend { display: flex; gap: 20px; align-items: center; }
+        .legend-item { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: #475569; }
+        .legend-box { width: 16px; height: 16px; border-radius: 4px; }
+        .legend-root { border: 2px solid #1a73e8; background: #fff; }
+        .legend-active { background: rgba(5, 205, 153, 0.1); border: 1px solid #05cd99; }
+        .legend-inactive { background: rgba(230, 57, 70, 0.1); border: 1px solid #e63946; }
+
+        .tree-stats-row { display: flex; gap: 16px; }
+        .tree-stat-box { border: 1px solid var(--border-color); background: #f8f9fc; border-radius: 12px; padding: 12px 20px; text-align: center; }
+        .tree-stat-box h4 { font-size: 11px; color: var(--text-muted); margin-bottom: 4px; font-weight: 700; text-transform: uppercase;}
+        .tree-stat-box .val { font-size: 20px; font-weight: 900; color: var(--text-main); }
+        .val.text-green { color: var(--color-green); }
+
+        /* --- MODAL CSS --- */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(11, 20, 55, 0.6); backdrop-filter: blur(4px); display: flex; justify-content: center; align-items: center; z-index: 2000; opacity: 0; visibility: hidden; transition: var(--transition); }
+        .modal-overlay.active { opacity: 1; visibility: visible; }
+        .modal-card { background: var(--card-bg); width: 90%; max-width: 360px; border-radius: 20px; padding: 32px; position: relative; transform: translateY(30px); transition: var(--transition); box-shadow: 0 20px 40px rgba(0,0,0,0.2); border: 1px solid var(--border-color); text-align: center; }
+        .modal-overlay.active .modal-card { transform: translateY(0); }
+        
+        .modal-close { position: absolute; top: 16px; right: 16px; width: 32px; height: 32px; border-radius: 50%; background: var(--input-bg); border: none; font-size: 16px; color: var(--text-muted); cursor: pointer; transition: var(--transition); display: flex; align-items: center; justify-content: center; }
+        .modal-close:hover { color: white; background: var(--color-red); transform: rotate(90deg); }
+        
+        .modal-avatar { width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 3px solid #f4f7fe; box-shadow: 0 4px 15px rgba(0,0,0,0.1); margin: 0 auto 16px auto; }
+        .modal-name { font-size: 20px; font-weight: 800; color: var(--text-main); margin-bottom: 4px; }
+        .modal-id { font-size: 14px; font-weight: 700; color: var(--color-blue); margin-bottom: 16px; }
+        
+        .status-badge { display: inline-block; padding: 6px 16px; border-radius: 20px; font-size: 12px; font-weight: 800; text-transform: uppercase; margin-bottom: 24px; }
+        .badge-active { background: rgba(5, 205, 153, 0.1); color: var(--color-green); }
+        .badge-inactive { background: rgba(230, 57, 70, 0.1); color: var(--color-red); }
+
+        /* Downline Extra Details Box */
+        .downline-details { background: var(--input-bg); padding: 16px; border-radius: 12px; text-align: left; margin-bottom: 24px; font-size: 13px; }
+        .downline-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .downline-row:last-child { margin-bottom: 0; }
+        .downline-label { color: var(--text-muted); font-weight: 600; }
+        .downline-value { color: var(--text-main); font-weight: 800; }
+
+        .modal-action-btn { width: 100%; background: var(--color-blue); color: white; border: none; padding: 14px; border-radius: 12px; font-size: 14px; font-weight: 700; cursor: pointer; transition: var(--transition); display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 15px rgba(26, 115, 232, 0.2); }
+        .modal-action-btn:hover { background: #1557b0; transform: translateY(-2px); box-shadow: 0 8px 20px rgba(26, 115, 232, 0.3); }
+
+        .btn-reset { background: var(--input-bg); color: var(--text-main); font-size: 12px; padding: 8px 16px; border-radius: 8px; border: none; cursor: pointer; font-weight: 600; transition: var(--transition); }
+        .btn-reset:hover { background: #e2e8f0; }
+
+        @media (max-width: 900px) { #menuToggle { display: block !important; } .sidebar { position: fixed; left: -260px; top: 0; height: 100vh; z-index: 1000; } .sidebar.active { left: 0; } .main-content { width: 100%; } .top-header { padding: 16px 20px; } .dashboard-container { padding: 20px; } .tree-footer { flex-direction: column; align-items: center; } .tree-stats-row { width: 100%; justify-content: center; } }
+    </style>
+</head>
+<body>
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">USER PANEL</div>
+        <ul class="sidebar-menu">
+            <li><a href="/"><i class="fas fa-home"></i> Dashboard</a></li>
+            <li><a href="/profile"><i class="fas fa-user"></i> Profile</a></li> 
+            <li><a href="/courses"><i class="fas fa-graduation-cap"></i> My Courses</a></li>
+            <li><a href="/my-tree" class="active"><i class="fas fa-sitemap"></i> My Tree</a></li> 
+            <li><a href="/my-team"><i class="fas fa-users"></i> My Team</a></li>  
+            <li><a href="/bank"><i class="fas fa-university"></i> Bank Details</a></li>
+            <li><a href="/withdraw"><i class="fas fa-money-bill-wave"></i> Withdraw Request</a></li>
+            <li><a href="/referral"><i class="fas fa-link"></i> Referral Link</a></li>
+            <li><a href="/support"><i class="fas fa-headset"></i> Support</a></li>
+            <li><a href="/logout" style="margin-top: auto; color: var(--color-red);"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
+        </ul>
+    </aside>
+
+    <main class="main-content">
+        <header class="top-header">
+            <div class="user-greeting" style="display: flex; align-items: center; gap: 14px;">
+                <button id="menuToggle" style="background: none; border: none; font-size: 22px; color: var(--text-main); cursor: pointer; display: none; padding: 4px;">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <div>
+                    <h2>My Downline Tree</h2>
+                    <p>USER ID : {{ user_code }}</p>
+                </div>
+            </div>
+            <div class="header-actions">
+                <div class="notification" id="notificationBell"><i class="far fa-bell"></i></div>
+                <div class="user-profile">
+                    <img src="{{ profile_img }}" alt="Profile">
+                </div>
+            </div>
+        </header>
+
+        <div class="dashboard-container">
+            <div class="tree-section">
+                <div class="section-title">
+                    <div class="title-left" id="tree_title_header">Binary Tree - Loading...</div>
+                    <button id="resetTreeBtn" class="btn-reset" style="display: none;" onclick="loadUserTree('{{ user_code }}')">
+                        <i class="fas fa-undo"></i> Back to My Root
+                    </button>
+                </div>
+                <div class="tree-container">
+                    <div class="tree-wrapper">
+                        <div class="tree">
+                            <ul>
+                                <li>
+                                    <div id="tree_root_container">
+                                        <div class="tree-card root-card">
+                                            <div class="tree-avatar-placeholder"><i class="fas fa-spinner fa-spin"></i></div>
+                                            <div class="tree-name">Loading...</div>
+                                        </div>
+                                    </div>
+                                    <ul>
+                                        <li id="user_left_container"></li>
+                                        <li id="user_right_container"></li>
+                                    </ul>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="tree-footer">
+                        <div class="tree-legend">
+                            <div class="legend-item"><div class="legend-box legend-root"></div> Root Node</div>
+                            <div class="legend-item"><div class="legend-box legend-active"></div> Active</div>
+                            <div class="legend-item"><div class="legend-box legend-inactive"></div> Inactive</div>
+                        </div>
+                        <div class="tree-stats-row">
+                            <div class="tree-stat-box">
+                                <h4>TOTAL TEAM (L+R)</h4>
+                                <div class="val" id="val_total_team">0</div>
+                            </div>
+                            <div class="tree-stat-box">
+                                <h4>ACTIVE TEAM</h4>
+                                <div class="val text-green" id="val_tree_active">0</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <p style="font-size: 12px; color: var(--text-muted); margin-top: 24px; font-weight: 600; text-align: center;">
+                    <i class="fas fa-info-circle" style="color: var(--color-blue);"></i> Click on any user card to view their details or expand their downline.
+                </p>
+            </div>
+        </div>
+
+        <div id="userModal" class="modal-overlay" onclick="closeModalOnBg(event)">
+            <div class="modal-card" id="modalCard">
+                <button class="modal-close" onclick="closeUserModal()"><i class="fas fa-times"></i></button>
+                
+                <img id="modal_avatar" src="" alt="Profile" class="modal-avatar">
+                <div class="modal-name" id="modal_name">Loading...</div>
+                <div class="modal-id" id="modal_id">ID</div>
+                <div id="modal_status" class="status-badge badge-active">Active</div>
+                
+                <div id="downline_extra_details" class="downline-details" style="display: none;">
+                    <div class="downline-row">
+                        <span class="downline-label">Course Enrolled:</span>
+                        <span id="modal_course" class="downline-value">Basic Package</span>
+                    </div>
+                    <div class="downline-row">
+                        <span class="downline-label">Join Date:</span>
+                        <span id="modal_join_date" class="downline-value">N/A</span>
+                    </div>
+                </div>
+
+                <button id="view_tree_btn" class="modal-action-btn" onclick="viewModalUserTree()">
+                    <i class="fas fa-sitemap"></i> View This User's Tree
+                </button>
+            </div>
+        </div>
+
+    </main>
+    <script>
+        const MAIN_USER_CODE = "{{ user_code }}"; 
+        let globalTreeData = {}; 
+        let selectedUserId = '';
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const menuToggle = document.getElementById('menuToggle');
+            const sidebar = document.getElementById('sidebar');
+
+            if (menuToggle && sidebar) {
+                menuToggle.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    sidebar.classList.toggle('active');
+                });
+                document.addEventListener('click', function(e) {
+                    if (!sidebar.contains(e.target) && sidebar.classList.contains('active')) {
+                        sidebar.classList.remove('active');
+                    }
+                });
+            }
+
+            fetch('/api/dashboard/me')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        const team = data.data.team || {};
+                        const totalTeamEl = document.getElementById('val_total_team');
+                        const activeTeamEl = document.getElementById('val_tree_active');
+                        if (totalTeamEl) totalTeamEl.innerText = (team.total_team || 0).toLocaleString('en-IN');
+                        if (activeTeamEl) activeTeamEl.innerText = (team.active_team || 0).toLocaleString('en-IN');
+                        
+                        loadUserTree(MAIN_USER_CODE);
+                    }
+                })
+                .catch(error => console.error("Error fetching live data:", error));
+        });
+
+        function loadUserTree(targetCode) {
+            if (!targetCode || targetCode === "None") return;
+
+            document.getElementById('resetTreeBtn').style.display = (targetCode === MAIN_USER_CODE) ? 'none' : 'inline-block';
+
+            fetch(`/api/admin/tree-data/${targetCode}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        // FIX: Clear the old cache completely before saving new data
+                        globalTreeData = {}; 
+
+                        // SAVE NEW DATA TO CACHE
+                        // Save the root
+                        globalTreeData[data.id] = data;
+                        
+                        // Save the children if they exist
+                        if(data.children) {
+                            if(data.children.left) globalTreeData[data.children.left.id] = data.children.left;
+                            if(data.children.right) globalTreeData[data.children.right.id] = data.children.right;
+                        }
+
+                        // Update Header
+                        document.getElementById('tree_title_header').innerText = `Binary Tree - ${data.id} (${data.name})`;
+
+                        // Render Root Card
+                        const rootContainer = document.getElementById('tree_root_container');
+                        const rootStatusStr = data.active ? 'Active' : 'Inactive';
+                        const rootStatusClass = data.active ? 'status-active' : 'status-inactive';
+                        rootContainer.innerHTML = `
+                            <div class="tree-card root-card" onclick="openUserModal('${data.id}')">
+                                <img src="${data.image}" alt="Profile" class="tree-avatar">
+                                <div class="tree-name">${data.name}</div>
+                                <div class="tree-id">${data.id}</div>
+                                <div class="tree-status ${rootStatusClass}">${rootStatusStr}</div>
+                            </div>
+                        `;
+
+                        // Render Left Card
+                        const leftContainer = document.getElementById('user_left_container');
+                        if (data.children && data.children.left) {
+                            const l = data.children.left;
+                            const lStatusStr = l.active ? 'Active' : 'Inactive';
+                            const lStatusClass = l.active ? 'status-active' : 'status-inactive';
+                            leftContainer.innerHTML = `
+                                <div class="tree-card" onclick="openUserModal('${l.id}')">
+                                    <img src="${l.image}" alt="Profile" class="tree-avatar">
+                                    <div class="tree-name">${l.name}</div>
+                                    <div class="tree-id">${l.id}</div>
+                                    <div class="tree-status ${lStatusClass}">L • ${lStatusStr}</div>
+                                </div>
+                            `;
+                        } else {
+                            leftContainer.innerHTML = `
+                                <div class="tree-card empty-node" style="border-style: dashed; opacity: 0.7; box-shadow: none;">
+                                    <div class="tree-avatar-placeholder" style="background: transparent; border: 1px dashed #cbd5e1;"><i class="fas fa-plus" style="color: #cbd5e1;"></i></div>
+                                    <div class="tree-name" style="color: #94a3b8;">Empty Position</div>
+                                    <div class="tree-id" style="color: #cbd5e1;">Left Leg</div>
+                                </div>
+                            `;
+                        }
+
+                        // Render Right Card
+                        const rightContainer = document.getElementById('user_right_container');
+                        if (data.children && data.children.right) {
+                            const r = data.children.right;
+                            const rStatusStr = r.active ? 'Active' : 'Inactive';
+                            const rStatusClass = r.active ? 'status-active' : 'status-inactive';
+                            rightContainer.innerHTML = `
+                                <div class="tree-card" onclick="openUserModal('${r.id}')">
+                                    <img src="${r.image}" alt="Profile" class="tree-avatar">
+                                    <div class="tree-name">${r.name}</div>
+                                    <div class="tree-id">${r.id}</div>
+                                    <div class="tree-status ${rStatusClass}">R • ${rStatusStr}</div>
+                                </div>
+                            `;
+                        } else {
+                            rightContainer.innerHTML = `
+                                <div class="tree-card empty-node" style="border-style: dashed; opacity: 0.7; box-shadow: none;">
+                                    <div class="tree-avatar-placeholder" style="background: transparent; border: 1px dashed #cbd5e1;"><i class="fas fa-plus" style="color: #cbd5e1;"></i></div>
+                                    <div class="tree-name" style="color: #94a3b8;">Empty Position</div>
+                                    <div class="tree-id" style="color: #cbd5e1;">Right Leg</div>
+                                </div>
+                            `;
+                        }
+                    }
+                })
+                .catch(err => console.error("Error drawing tree:", err));
+        }
+
+        // --- NEW MODAL LOGIC ---
+        function openUserModal(userId) {
+            const userData = globalTreeData[userId];
+            if(!userData) return;
+            
+            selectedUserId = userId;
+            
+            // Populate basic data
+            document.getElementById('modal_avatar').src = userData.image || 'https://via.placeholder.com/80';
+            document.getElementById('modal_name').innerText = userData.name;
+            document.getElementById('modal_id').innerText = userData.id;
+            
+            const statusEl = document.getElementById('modal_status');
+            if (userData.active) {
+                statusEl.innerText = 'Active User';
+                statusEl.className = 'status-badge badge-active';
+            } else {
+                statusEl.innerText = 'Inactive User';
+                statusEl.className = 'status-badge badge-inactive';
+            }
+
+            // Logic to show/hide extra fields based on if it's the root user
+            const extraDetailsBox = document.getElementById('downline_extra_details');
+            const viewTreeBtn = document.getElementById('view_tree_btn');
+
+            if (userId === MAIN_USER_CODE) {
+                // If it's YOU, hide the extra course details and the view tree button
+                extraDetailsBox.style.display = 'none';
+                viewTreeBtn.style.display = 'none';
+            } else {
+                // If it's a DOWNLINE member, show course details and the view tree button
+                extraDetailsBox.style.display = 'block';
+                viewTreeBtn.style.display = 'flex';
+                
+                // Assuming your API returns 'course' and 'join_date'. Fallback if not available.
+                document.getElementById('modal_course').innerText = userData.course || 'Not Enrolled';
+                document.getElementById('modal_join_date').innerText = userData.join_date || 'N/A';
+            }
+
+            document.getElementById('userModal').classList.add('active');
+        }
+
+        function closeUserModal() {
+            document.getElementById('userModal').classList.remove('active');
+        }
+
+        function closeModalOnBg(event) {
+            if(event.target.id === 'userModal') {
+                closeUserModal();
+            }
+        }
+
+        function viewModalUserTree() {
+            closeUserModal();
+            loadUserTree(selectedUserId); // Redraws the tree starting from the selected user!
+        }
+
+        document.querySelector('a[href="/logout"]')?.addEventListener('click', function(e) {
+            e.preventDefault();
+            if (confirm("Are you sure you want to logout?")) {
+                localStorage.clear();
+                sessionStorage.clear();
+                window.location.href = "/logout";
+            }
+        });
+    </script>
+</body>
+</html>

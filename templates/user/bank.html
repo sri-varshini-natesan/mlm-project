@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bank Details - User Panel</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --bg-color: #f8f9fc;
+            --sidebar-bg: #0b1437;
+            --sidebar-hover: rgba(255, 255, 255, 0.08);
+            --card-bg: #ffffff;
+            --text-main: #1b2559;
+            --text-muted: #8f9bba;
+            --color-green: #05cd99;
+            --color-blue: #4318ff;
+            --color-orange: #ffb547;
+            --color-purple: #7000ff;
+            --color-red: #ee5d50;
+            --border-color: #e9edf7;
+            --input-bg: #f4f7fe;
+            --shadow: 0 10px 30px rgba(11, 20, 55, 0.03);
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
+        body { background-color: var(--bg-color); color: var(--text-main); display: flex; min-height: 100vh; overflow-x: hidden; }
+
+        /* --- SIDEBAR --- */
+        .sidebar { width: 260px; background-color: var(--sidebar-bg); color: white; display: flex; flex-direction: column; transition: var(--transition); flex-shrink: 0; z-index: 100; }
+        .sidebar-header { padding: 30px 24px; font-size: 20px; font-weight: 800; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.05); letter-spacing: 1px; }
+        .sidebar-menu { list-style: none; padding: 24px 0; flex: 1; }
+        .sidebar-menu li a { display: flex; align-items: center; padding: 16px 30px; color: #8f9bba; text-decoration: none; font-weight: 600; font-size: 15px; transition: var(--transition); }
+        .sidebar-menu li a:hover, .sidebar-menu li a.active { background-color: var(--sidebar-hover); color: white; border-right: 4px solid var(--color-blue); }
+        .sidebar-menu li a i { width: 24px; margin-right: 14px; font-size: 18px; }
+
+        /* --- MAIN CONTENT --- */
+        .main-content { flex: 1; display: flex; flex-direction: column; overflow-y: auto; width: calc(100% - 260px); }
+        .top-header { background-color: var(--card-bg); padding: 16px 32px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); position: sticky; top: 0; z-index: 50; }
+        .user-greeting h2 { font-size: 20px; color: var(--text-main); font-weight: 800; }
+        .user-greeting p { font-size: 13px; color: var(--text-muted); font-weight: 600; margin-top: 2px; }
+        .header-actions { display: flex; align-items: center; gap: 24px; }
+        .user-profile { display: flex; align-items: center; gap: 12px; cursor: pointer; }
+        .user-profile img { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; border: 2px solid var(--border-color); }
+
+        .dashboard-container { padding: 32px; max-width: 100%; animation: fadeIn 0.5s ease-out forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .page-header-flex { margin-bottom: 32px; }
+        .page-title { font-size: 24px; font-weight: 800; color: var(--text-main); }
+
+        /* --- BANK LAYOUT --- */
+        .bank-grid { display: grid; grid-template-columns: 350px 1fr; gap: 24px; }
+        .card { background-color: var(--card-bg); border-radius: 20px; border: 1px solid var(--border-color); box-shadow: var(--shadow); padding: 32px; }
+
+        .virtual-card { background: linear-gradient(135deg, #0b1437, #1b2559); border-radius: 20px; padding: 24px; color: white; box-shadow: 0 15px 35px rgba(11, 20, 55, 0.2); position: relative; overflow: hidden; margin-bottom: 24px; }
+        .virtual-card::after { content: ''; position: absolute; top: -50%; right: -20%; width: 200px; height: 200px; background: rgba(255,255,255,0.05); border-radius: 50%; }
+        .card-type { font-size: 12px; font-weight: 700; color: #8f9bba; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center; }
+        .card-number { font-size: 22px; font-weight: 800; letter-spacing: 2px; margin-bottom: 24px; text-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+        .card-details { display: flex; justify-content: space-between; align-items: flex-end; }
+        .card-label { font-size: 9px; color: #8f9bba; text-transform: uppercase; margin-bottom: 4px; font-weight: 600; }
+        .card-value { font-size: 14px; font-weight: 700; }
+
+        .security-notice { display: flex; align-items: flex-start; gap: 12px; padding: 16px; background: rgba(67, 24, 255, 0.04); border: 1px solid rgba(67, 24, 255, 0.1); border-radius: 12px; }
+        .security-notice i { color: var(--color-blue); font-size: 20px; }
+        .security-notice p { font-size: 12px; color: var(--text-muted); line-height: 1.5; font-weight: 500; }
+
+        .form-title { font-size: 16px; font-weight: 800; color: var(--text-main); margin-bottom: 24px; text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; }
+        .form-title::before { content: ''; display: inline-block; width: 4px; height: 18px; background-color: var(--color-blue); border-radius: 4px; margin-right: 12px; }
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .form-group { display: flex; flex-direction: column; margin-bottom: 20px; }
+        .form-group.full-width { grid-column: 1 / -1; }
+        .form-label { font-size: 13px; font-weight: 700; color: var(--text-main); margin-bottom: 8px; }
+
+        .form-control, .input-group input { width: 100%; padding: 14px 16px; border-radius: 12px; border: 1px solid var(--border-color); background-color: var(--input-bg); font-size: 14px; font-weight: 600; color: var(--text-main); outline: none; }
+        .form-control:focus, .input-group:focus-within { border-color: var(--color-blue); background-color: #ffffff; }
+        .input-group { display: flex; border: 1px solid var(--border-color); border-radius: 12px; background-color: var(--input-bg); }
+        .input-group .prefix { padding: 14px 12px 14px 16px; font-weight: 700; color: var(--text-muted); border-right: 1px solid var(--border-color); display: flex; align-items: center; }
+        .input-group input { border: none; background: transparent; flex: 1; }
+        
+        .form-control.error, .input-group.error { border-color: var(--color-red) !important; background-color: #fff9f9; }
+        .error-msg { color: var(--color-red); font-size: 11px; font-weight: 600; margin-top: 6px; display: none; }
+
+        .btn-primary { background-color: var(--color-blue); color: white; border: none; padding: 14px 28px; border-radius: 12px; font-size: 14px; font-weight: 700; cursor: pointer; transition: var(--transition); }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(67, 24, 255, 0.3); }
+
+        @media (max-width: 1024px) { .bank-grid { grid-template-columns: 1fr; } }
+        
+        /* 🌟 FIXED THE SIDEPANEL NAVIGATION DRAWER BREAKPOINTS BELOW 🌟 */
+        @media (max-width: 900px) { 
+            #menuToggle { display: block !important; }
+            .sidebar { position: fixed; left: -260px; top: 0; height: 100vh; z-index: 1000; } 
+            .sidebar.active { left: 0; } 
+            .main-content { width: 100%; } 
+            .top-header { padding: 16px 20px; } 
+        }
+        @media (max-width: 600px) { .form-grid { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">USER PANEL</div>
+        <ul class="sidebar-menu">
+            <li><a href="/"><i class="fas fa-home"></i> Dashboard</a></li>
+            <li><a href="/profile"><i class="fas fa-user"></i> Profile</a></li>
+            <li><a href="/courses"><i class="fas fa-graduation-cap"></i> My Courses</a></li>
+            <li><a href="/my-tree"><i class="fas fa-sitemap"></i> My Tree</a></li> 
+            <li><a href="/my-team"><i class="fas fa-users"></i> My Team</a></li>  
+            <li><a href="/bank" class="active"><i class="fas fa-university"></i> Bank Details</a></li>
+            <li><a href="/withdraw"><i class="fas fa-money-bill-wave"></i> Withdraw Request</a></li>
+            <li><a href="/referral"><i class="fas fa-link"></i> Referral Link</a></li>
+            <li><a href="/support"><i class="fas fa-headset"></i> Support</a></li>
+            <li><a href="/logout" style="margin-top: auto; color: var(--color-red);"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
+        </ul>
+    </aside>
+
+    <main class="main-content">
+        <header class="top-header">
+            <div class="user-greeting" style="display: flex; align-items: center; gap: 14px;">
+                <button id="menuToggle" style="background: none; border: none; font-size: 22px; color: var(--text-main); cursor: pointer; display: none; padding: 4px;">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <div>
+                    <h2>Bank Details</h2>
+                    <p>Manage your withdrawal accounts safely</p>
+                </div>
+            </div>
+            <div class="header-actions">
+                <div class="notification"><i class="far fa-bell"></i></div>
+                <div class="user-profile">
+                    <img src="{{ profile_img }}" alt="Profile">
+                </div>
+            </div>
+        </header>
+
+        <div class="dashboard-container">
+            <div class="page-header-flex">
+                <h1 class="page-title">Payout Accounts</h1>
+            </div>
+            
+            <div class="bank-grid">
+                <div class="card">
+                    <div class="form-title">Current Linked Account</div>
+                    <div class="virtual-card">
+                        <div class="card-type"><span id="previewBankName">Primary Bank</span> <i class="fas fa-building"></i></div>
+                        <div class="card-number" id="previewAccNumber">•••• •••• •••• XXXX</div>
+                        <div class="card-details">
+                            <div>
+                                <div class="card-label">Account Holder</div>
+                                <div class="card-value" id="previewName">{{ user_name|upper }}</div>
+                            </div>
+                            <div>
+                                <div class="card-label">IFSC Code</div>
+                                <div class="card-value" id="previewIfsc">XXXX0000000</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="security-notice">
+                        <i class="fas fa-lock"></i>
+                        <p>Your bank details are securely stored. Withdrawals will only be processed to the account name matching your KYC documents.</p>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="form-title">Update Bank Details</div>
+                    <form id="bankForm">
+                        <div class="form-grid">
+                            
+                            <div class="form-group">
+                                <label class="form-label">Account Holder</label>
+                                <input type="text" id="accName" class="form-control" placeholder="John Doe" required>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Bank Account Number</label>
+                                <input type="password" id="accNumber" class="form-control" placeholder="Enter Account Number" required>
+                                <div class="error-msg" id="accError">Must be at least 6 digits.</div>
+                            </div>
+                            <div class="form-group full-width">
+                                <label class="form-label">Bank IFSC Code</label>
+                                <input type="text" id="ifscCode" class="form-control" placeholder="e.g. SBIN0001234" maxlength="11" required>
+                                <div class="error-msg" id="ifscError">Invalid IFSC Code.</div>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">UPI ID</label>
+                                <input type="text" id="upiId" class="form-control" placeholder="name@upi" required>
+                                <div class="error-msg" id="upiError">Invalid UPI ID format.</div>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">UPI Mobile Number</label>
+                                <div class="input-group" id="mobileGroup">
+                                    <div class="prefix">+91</div>
+                                    <input type="tel" id="upiMobile" placeholder="10-digit number" maxlength="10" required>
+                                </div>
+                                <div class="error-msg" id="mobileError">Must be exactly 10 digits.</div>
+                            </div>
+
+                        </div>
+                        <div style="margin-top: 24px; text-align: right;">
+                            <button type="submit" id="saveBtn" class="btn-primary"><i class="fas fa-save"></i> Save Account Details</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // --- 1. THE VIRTUAL CARD ENGINE ---
+        
+        // Dictionary mapping common IFSC prefixes to actual Bank Names
+        const bankNames = {
+            "SBIN": "State Bank of India", "HDFC": "HDFC Bank", "ICIC": "ICICI Bank", 
+            "UTIB": "YES Bank", "PUNB": "Punjab National Bank", "BKID": "Bank of India", 
+            "CNRB": "Canara Bank", "BARB": "Bank of Baroda", "KKBK": "Kotak Mahindra Bank",
+            "AXIS": "Axis Bank", "IDIB": "Indian Bank", "UUBI": "Union Bank of India"
+        };
+
+        function updateVirtualCard() {
+            // Update Holder Name
+            const name = document.getElementById('accName').value.trim();
+            document.getElementById('previewName').textContent = name ? name.toUpperCase() : '{{ user_name|upper }}';
+
+            // Update Account Number (Mask all but last 4)
+            const acc = document.getElementById('accNumber').value.trim();
+            if (acc.length >= 4) {
+                const last4 = acc.slice(-4);
+                document.getElementById('previewAccNumber').textContent = `•••• •••• •••• ${last4}`;
+            } else {
+                document.getElementById('previewAccNumber').textContent = `•••• •••• •••• XXXX`;
+            }
+
+            // Update IFSC & Bank Name dynamically
+            const ifsc = document.getElementById('ifscCode').value.trim().toUpperCase();
+            document.getElementById('previewIfsc').textContent = ifsc || 'XXXX0000000';
+            
+            if (ifsc.length >= 4) {
+                const prefix = ifsc.substring(0, 4);
+                document.getElementById('previewBankName').textContent = bankNames[prefix] || 'Primary Bank';
+            } else {
+                document.getElementById('previewBankName').textContent = 'Primary Bank';
+            }
+        }
+
+        // Attach listeners to trigger update instantly as the user types
+        document.getElementById('accName').addEventListener('input', updateVirtualCard);
+        document.getElementById('accNumber').addEventListener('input', updateVirtualCard);
+        document.getElementById('ifscCode').addEventListener('input', updateVirtualCard);
+
+
+        // --- 2. DATA LOAD & SAVE ENGINE ---
+
+        // Auto-load data on page entry
+        document.addEventListener("DOMContentLoaded", () => {
+            // 🌟 ATTACH NAVIGATION INTERACTIVE EVENT LISTENERS TO SLIDE SIDEPANELS 🌟
+            const menuToggle = document.getElementById('menuToggle');
+            const sidebar = document.getElementById('sidebar');
+
+            if (menuToggle && sidebar) {
+                menuToggle.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    sidebar.classList.toggle('active');
+                });
+
+                document.addEventListener('click', function(e) {
+                    if (!sidebar.contains(e.target) && sidebar.classList.contains('active')) {
+                        sidebar.classList.remove('active');
+                    }
+                });
+            }
+
+            fetch('/api/bank/me')
+                .then(res => res.json())
+                .then(data => {
+                    if (data.status === 'success' && data.data) {
+                        const b = data.data;
+                        document.getElementById('accName').value = b.bank_acc_name || '{{ user_name }}';
+                        document.getElementById('accNumber').value = b.bank_acc_no || '';
+                        document.getElementById('ifscCode').value = b.bank_ifsc || '';
+                        document.getElementById('upiId').value = b.upi_id || '';
+                        document.getElementById('upiMobile').value = b.upi_mobile || '';
+                        
+                        updateVirtualCard(); // Force card UI to render loaded data
+                    }
+                })
+                .catch(err => console.error("Error loading bank details:", err));
+        });
+
+        // Form Submission
+        document.getElementById('bankForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const hasErrors = document.querySelectorAll('.error').length > 0;
+            if (hasErrors) {
+                alert("Please resolve the highlighted validation errors.");
+                return;
+            }
+
+            const btn = document.getElementById('saveBtn');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+
+            const payload = {
+                bank_acc_name: document.getElementById('accName').value,
+                bank_acc_no: document.getElementById('accNumber').value,
+                bank_ifsc: document.getElementById('ifscCode').value,
+                upi_id: document.getElementById('upiId').value,
+                upi_mobile: document.getElementById('upiMobile').value
+            };
+
+            fetch('/api/bank/update', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            })
+            .then(res => res.json())
+            .then(data => {
+                alert(data.message);
+                btn.innerHTML = originalText;
+                if(data.status === 'success') {
+                    updateVirtualCard();
+                }
+            })
+            .catch(err => {
+                console.error("Save error:", err);
+                alert("Server connection failed.");
+                btn.innerHTML = originalText;
+            });
+        });
+
+
+        // --- 3. VALIDATION SCRIPTS ---
+
+        document.getElementById('accNumber').addEventListener('input', function() {
+            this.value = this.value.replace(/\D/g, ''); 
+            if (this.value.length > 0 && this.value.length < 6) {
+                this.classList.add('error'); document.getElementById('accError').style.display = 'block';
+            } else {
+                this.classList.remove('error'); document.getElementById('accError').style.display = 'none';
+            }
+        });
+
+        document.getElementById('ifscCode').addEventListener('input', function() {
+            this.value = this.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+            const ifscPattern = /^[A-Z]{4}0[A-Z0-9]{6}$/; 
+            if (this.value.length > 0 && !ifscPattern.test(this.value)) {
+                this.classList.add('error'); document.getElementById('ifscError').style.display = 'block';
+            } else {
+                this.classList.remove('error'); document.getElementById('ifscError').style.display = 'none';
+            }
+        });
+
+        document.getElementById('upiId').addEventListener('input', function() {
+            this.value = this.value.toLowerCase().replace(/ /g, ''); 
+            const upiPattern = /[a-zA-Z0-9.\-_]{2,256}@[a-zA-Z]{2,64}/;
+            if (this.value.length > 0 && !upiPattern.test(this.value)) {
+                this.classList.add('error'); document.getElementById('upiError').style.display = 'block';
+            } else {
+                this.classList.remove('error'); document.getElementById('upiError').style.display = 'none';
+            }
+        });
+
+        document.getElementById('upiMobile').addEventListener('input', function() {
+            this.value = this.value.replace(/\D/g, ''); 
+            if (this.value.length > 0 && this.value.length !== 10) {
+                document.getElementById('mobileGroup').classList.add('error'); document.getElementById('mobileError').style.display = 'block';
+            } else {
+                document.getElementById('mobileGroup').classList.remove('error'); document.getElementById('mobileError').style.display = 'none';
+            }
+        });
+
+        document.querySelector('a[href="/logout"]')?.addEventListener('click', function(e) {
+            e.preventDefault();
+            if (confirm("Are you sure you want to logout?")) {
+                localStorage.clear(); sessionStorage.clear(); window.location.href = "/logout"; 
+            }
+        });
+    </script>
+</body>
+</html>

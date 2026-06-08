@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Modern User Panel Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --bg-color: #f8f9fc;
+            --sidebar-bg: #0b1437;
+            --sidebar-hover: rgba(255, 255, 255, 0.08);
+            --card-bg: #ffffff;
+            --text-main: #1b2559;
+            --text-muted: #8f9bba;
+            
+            /* Highly Distinct Colors */
+            --color-green: #05cd99;
+            --color-blue: #1a73e8;   
+            --color-purple: #9c27b0; 
+            --color-orange: #ff9800; 
+            --color-red: #e63946;    
+            
+            --border-color: #e9edf7;
+            --input-bg: #f4f7fe;
+            --shadow: 0 10px 30px rgba(11, 20, 55, 0.03);
+            --shadow-hover: 0 15px 35px rgba(11, 20, 55, 0.08);
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
+        body { background-color: var(--bg-color); color: var(--text-main); display: flex; min-height: 100vh; overflow-x: hidden; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* --- SIDEBAR --- */
+        .sidebar { width: 260px; background-color: var(--sidebar-bg); color: white; display: flex; flex-direction: column; transition: var(--transition); flex-shrink: 0; z-index: 100; }
+        .sidebar-header { padding: 30px 24px; font-size: 20px; font-weight: 800; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.05); letter-spacing: 1px; color: #ffffff; }
+        .sidebar-menu { list-style: none; padding: 24px 0; flex: 1; }
+        .sidebar-menu li a { display: flex; align-items: center; padding: 16px 30px; color: #8f9bba; text-decoration: none; font-weight: 600; font-size: 15px; transition: var(--transition); }
+        .sidebar-menu li a:hover, .sidebar-menu li a.active { background-color: var(--sidebar-hover); color: white; border-right: 4px solid var(--color-blue); }
+        .sidebar-menu li a i { width: 24px; margin-right: 14px; font-size: 18px; }
+
+        /* --- MAIN CONTENT --- */
+        .main-content { flex: 1; display: flex; flex-direction: column; overflow-y: auto; overflow-x: hidden; width: calc(100% - 260px); }
+
+        /* --- TOP HEADER --- */
+        .top-header { background-color: var(--card-bg); padding: 16px 32px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); position: sticky; top: 0; z-index: 50; }
+        .user-greeting h2 { font-size: 20px; color: var(--text-main); font-weight: 800; }
+        .user-greeting p { font-size: 13px; color: var(--text-muted); font-weight: 600; margin-top: 2px; }
+
+        .header-actions { display: flex; align-items: center; gap: 24px; }
+        .notification { position: relative; cursor: pointer; color: var(--text-muted); font-size: 20px; transition: var(--transition); }
+        .notification:hover { color: var(--color-blue); }
+        .notification.has-unread::after { content: ''; position: absolute; top: -2px; right: -2px; width: 8px; height: 8px; background-color: var(--color-red); border-radius: 50%; border: 2px solid white; }
+
+        .user-profile { display: flex; align-items: center; gap: 12px; cursor: pointer; }
+        .user-profile img { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; border: 2px solid var(--border-color); }
+
+        /* --- DASHBOARD CONTAINER --- */
+        .dashboard-container { padding: 32px; max-width: 100%; animation: fadeIn 0.5s ease-out forwards; }
+
+        /* --- GRID LAYOUTS --- */
+        .grid-4 { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 24px; margin-bottom: 32px; width: 100%; }
+        .grid-5 { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 16px; width: 100%; }
+
+        /* --- STAT CARDS --- */
+        .stat-card { background-color: var(--card-bg); padding: 20px 24px; border-radius: 20px; border: 1px solid var(--border-color); box-shadow: var(--shadow); display: flex; flex-direction: column; transition: var(--transition); }
+        .stat-card:hover { transform: translateY(-5px); box-shadow: var(--shadow-hover); }
+        .stat-header { display: flex; justify-content: space-between; align-items: center; width: 100%; margin-bottom: 16px; }
+        .stat-header h3 { font-size: 13px; color: var(--text-muted); margin: 0; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+        .stat-icon { width: 40px; height: 40px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+        .stat-card .amount { font-size: 22px; font-weight: 800; color: var(--text-main); letter-spacing: -0.5px; text-align: center; width: 100%; }
+
+        .bg-green { background: rgba(5, 205, 153, 0.1); color: var(--color-green); }
+        .bg-blue { background: rgba(26, 115, 232, 0.1); color: var(--color-blue); }
+        .bg-orange { background: rgba(255, 152, 0, 0.1); color: var(--color-orange); }
+        .bg-purple { background: rgba(156, 39, 176, 0.1); color: var(--color-purple); }
+
+        /* --- INCOME SUMMARY SECTION --- */
+        .income-summary-wrapper { background-color: var(--card-bg); border-radius: 20px; border: 1px solid var(--border-color); box-shadow: var(--shadow); padding: 28px; margin-bottom: 32px; width: 100%; }
+        .section-title { font-size: 15px; font-weight: 800; margin-bottom: 24px; color: var(--text-main); text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; }
+        .section-title::before { content: ''; display: inline-block; width: 4px; height: 18px; background-color: var(--color-blue); border-radius: 4px; margin-right: 12px; }
+
+        .summary-link { text-decoration: none; display: block; height: 100%; }
+        .summary-card { border-radius: 16px; padding: 20px 8px; text-align: center; display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100%; transition: var(--transition); word-wrap: break-word; overflow-wrap: break-word; border: 1px solid transparent; cursor: pointer; }
+        .card-green { background: rgba(5, 205, 153, 0.05); border-color: rgba(5, 205, 153, 0.15); }
+        .card-green:hover { background: rgba(5, 205, 153, 0.1); border-color: var(--color-green); transform: translateY(-3px); box-shadow: 0 8px 20px rgba(5, 205, 153, 0.15); }
+        .card-blue { background: rgba(26, 115, 232, 0.05); border-color: rgba(26, 115, 232, 0.15); }
+        .card-blue:hover { background: rgba(26, 115, 232, 0.1); border-color: var(--color-blue); transform: translateY(-3px); box-shadow: 0 8px 20px rgba(26, 115, 232, 0.15); }
+        .card-purple { background: rgba(156, 39, 176, 0.05); border-color: rgba(156, 39, 176, 0.15); }
+        .card-purple:hover { background: rgba(156, 39, 176, 0.1); border-color: var(--color-purple); transform: translateY(-3px); box-shadow: 0 8px 20px rgba(156, 39, 176, 0.15); }
+        .card-red { background: rgba(230, 57, 70, 0.05); border-color: rgba(230, 57, 70, 0.15); }
+        .card-red:hover { background: rgba(230, 57, 70, 0.1); border-color: var(--color-red); transform: translateY(-3px); box-shadow: 0 8px 20px rgba(230, 57, 70, 0.15); }
+        .card-orange { background: rgba(255, 152, 0, 0.05); border-color: rgba(255, 152, 0, 0.15); }
+        .card-orange:hover { background: rgba(255, 152, 0, 0.1); border-color: var(--color-orange); transform: translateY(-3px); box-shadow: 0 8px 20px rgba(255, 152, 0, 0.15); }
+
+        /* INCREASED SIZE FOR SUMMARY CARDS */
+        .summary-card h4 { font-size: 13px; font-weight: 800; margin-bottom: 12px; line-height: 1.4; color: var(--text-main); text-transform: uppercase; letter-spacing: 0.5px; }
+        .summary-card h4 i { font-size: 22px; margin-bottom: 8px; display: block; }
+        .summary-card .value { font-size: 22px; font-weight: 800; letter-spacing: -0.5px; }
+
+        /* --- SHARE FAB STYLES --- */
+        .share-fab { position: fixed; bottom: 30px; right: 30px; width: 60px; height: 60px; background: linear-gradient(135deg, #25d366, #128c7e); border-radius: 50%; display: flex; justify-content: center; align-items: center; color: white; font-size: 28px; box-shadow: 0 10px 20px rgba(37, 211, 102, 0.3); cursor: pointer; z-index: 1000; transition: var(--transition); }
+        .share-fab:hover { transform: scale(1.1); box-shadow: 0 15px 30px rgba(37, 211, 102, 0.4); }
+
+        .share-menu { position: fixed; bottom: 100px; right: 30px; background: white; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.15); padding: 10px; display: none; z-index: 998; border: 1px solid var(--border-color); }
+        .share-option { display: flex; align-items: center; gap: 12px; padding: 12px 20px; text-decoration: none; color: var(--text-main); font-weight: 600; font-size: 14px; border-radius: 8px; transition: var(--transition); }
+        .share-option:hover { background: var(--input-bg); color: var(--color-blue); }
+        .share-option i { width: 20px; text-align: center; font-size: 18px; }
+
+        @media (max-width: 1300px) { .grid-4 { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); } .grid-5 { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); } }
+        @media (max-width: 900px) { #menuToggle { display: block !important; } .sidebar { position: fixed; left: -260px; top: 0; height: 100vh; z-index: 1000; } .sidebar.active { left: 0; } .main-content { width: 100%; } .top-header { padding: 16px 20px; } .dashboard-container { padding: 20px; } }
+    </style>
+</head>
+<body>
+<aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">USER PANEL</div>
+    <ul class="sidebar-menu">
+        <li><a href="/" class="active"><i class="fas fa-home"></i> Dashboard</a></li>
+        <li><a href="/profile"><i class="fas fa-user"></i> Profile</a></li> 
+        <li><a href="/courses"><i class="fas fa-graduation-cap"></i> My Courses</a></li>
+        <li><a href="/my-tree"><i class="fas fa-sitemap"></i> My Tree</a></li> 
+        <li><a href="/my-team"><i class="fas fa-users"></i> My Team</a></li>  
+        <li><a href="/bank"><i class="fas fa-university"></i> Bank Details</a></li>
+        <li><a href="/withdraw"><i class="fas fa-money-bill-wave"></i> Withdraw Request</a></li>
+        <li><a href="/referral"><i class="fas fa-link"></i> Referral Link</a></li>
+        <li><a href="/support"><i class="fas fa-headset"></i> Support</a></li>
+        <li><a href="/logout" style="margin-top: auto; color: var(--color-red);"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
+    </ul>
+</aside>
+    
+    <main class="main-content">
+        <header class="top-header">
+            <div class="user-greeting" style="display: flex; align-items: center; gap: 14px;">
+                <button id="menuToggle" style="background: none; border: none; font-size: 22px; color: var(--text-main); cursor: pointer; display: none; padding: 4px;">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <div>
+                    <h2>Welcome Back!</h2>
+                    <p>USER ID : {{ user_code }}</p>
+                </div>
+            </div>
+            <div class="header-actions">
+                <div class="notification has-unread" id="notificationBell"><i class="far fa-bell"></i></div>
+                <div class="user-profile">
+                    <img src="{{ profile_img }}" alt="Profile">
+                </div>
+            </div>
+        </header>
+
+        <div class="dashboard-container">
+            <div class="grid-4">
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <h3>TOTAL INCOME</h3>
+                        <div class="stat-icon bg-green"><i class="fas fa-wallet"></i></div>
+                    </div>
+                    <div class="amount" id="val_total_income">₹ 0.00</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <h3>TOTAL WITHDRAW</h3>
+                        <div class="stat-icon bg-blue"><i class="fas fa-money-check-alt"></i></div>
+                    </div>
+                    <div class="amount" id="val_total_withdraw">₹ 0.00</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <h3>TOTAL BALANCE</h3>
+                        <div class="stat-icon bg-orange"><i class="fas fa-coins"></i></div>
+                    </div>
+                    <div class="amount" id="val_total_balance">₹ 0.00</div>
+                </div>
+            </div>
+
+            <div class="income-summary-wrapper">
+                <div class="section-title">INCOME SUMMARY</div>
+                
+                <div class="grid-5" style="margin-bottom: 24px;">
+                    <a href="/income-history?type=DAILY_ROI" class="summary-link">
+                        <div class="summary-card card-green">
+                            <h4>SELF STAKING<br>BONUS</h4>
+                            <div class="value" id="val_staking" style="color: var(--color-green);">₹ 0.00</div>
+                        </div>
+                    </a>
+                    <a href="/income-history?type=CASHBACK" class="summary-link">
+                        <div class="summary-card card-purple">
+                            <h4>CASHBACK<br>BONUS</h4>
+                            <div class="value" id="val_cashback" style="color: var(--color-purple);">₹ 0.00</div>
+                        </div>
+                    </a>
+                    <a href="/income-history?type=DIRECT_SPONSOR" class="summary-link">
+                        <div class="summary-card card-blue">
+                            <h4>DIRECT SPONSOR<br>BONUS</h4>
+                            <div class="value" id="val_sponsor" style="color: var(--color-blue);">₹ 0.00</div>
+                        </div>
+                    </a>
+                </div>
+
+                <div class="grid-5">
+                    <a href="/income-history?type=BINARY_MATCH" class="summary-link">
+                        <div class="summary-card card-purple">
+                            <h4>BINARY MATCH<br>BONUS</h4>
+                            <div class="value" id="val_binary" style="color: var(--color-purple);">₹ 0.00</div>
+                        </div>
+                    </a>
+                    <a href="/income-history?type=REPURCHASE" class="summary-link">
+                        <div class="summary-card card-red">
+                            <h4>SELF REPURCHASE<br>BONUS</h4>
+                            <div class="value" id="val_repurchase" style="color: var(--color-red);">₹ 0.00</div>
+                        </div>
+                    </a>
+                    <a href="/income-history?type=ROYALTY" class="summary-link">
+                        <div class="summary-card card-orange">
+                            <h4>CAPTAIN ROYALTY<br>BONUS</h4>
+                            <div class="value" id="val_royalty" style="color: var(--color-orange);">₹ 0.00</div>
+                        </div>
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="share-fab" id="shareFab">
+            <i class="fas fa-file-pdf"></i>
+        </div>
+        <div class="share-menu" id="shareMenu">
+            <a href="https://wa.me/?text=Check%20out%20our%20awesome%20course%20plans:%20[INSERT_PDF_LINK]" target="_blank" class="share-option">
+                <i class="fab fa-whatsapp" style="color: #25d366;"></i> WhatsApp
+            </a>
+            <a href="https://t.me/share/url?url=[INSERT_PDF_LINK]&text=Check%20out%20our%20plans" target="_blank" class="share-option">
+                <i class="fab fa-telegram" style="color: #0088cc;"></i> Telegram
+            </a>
+            <a href="mailto:?subject=Course%20Plans&body=Check%20out%20our%20plans:%20[INSERT_PDF_LINK]" class="share-option">
+                <i class="fas fa-envelope" style="color: #ea4335;"></i> Email
+            </a>
+        </div>
+    </main>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const menuToggle = document.getElementById('menuToggle');
+            const sidebar = document.getElementById('sidebar');
+            if (menuToggle && sidebar) {
+                menuToggle.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    sidebar.classList.toggle('active');
+                });
+                document.addEventListener('click', function(e) {
+                    if (!sidebar.contains(e.target) && sidebar.classList.contains('active')) {
+                        sidebar.classList.remove('active');
+                    }
+                });
+            }
+            
+            // Share FAB Logic
+            const fab = document.getElementById('shareFab');
+            const menu = document.getElementById('shareMenu');
+            if (fab && menu) {
+                fab.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    menu.style.display = (menu.style.display === 'block') ? 'none' : 'block';
+                });
+                document.addEventListener('click', () => { menu.style.display = 'none'; });
+            }
+            
+            if (!document.getElementById('custom-toast-container')) {
+                const toastContainer = document.createElement('div');
+                toastContainer.id = 'custom-toast-container';
+                toastContainer.style.cssText = 'position: fixed; top: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px;';
+                document.body.appendChild(toastContainer);
+            }
+            
+            const bell = document.getElementById('notificationBell');
+            if (bell) {
+                bell.addEventListener('click', function() {
+                    bell.classList.remove('has-unread');
+                    sendUiNotification("System Notifications", "Welcome back! Your secure connection to the node network pipeline is active.");
+                });
+            }
+            
+            fetch('/api/dashboard/me')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        const fin = data.data.financials || {};
+                        document.getElementById('val_total_income').innerText = '₹ ' + (fin.total_income || 0).toLocaleString('en-IN', {minimumFractionDigits: 2});
+                        document.getElementById('val_total_withdraw').innerText = '₹ ' + (fin.total_withdrawal || 0).toLocaleString('en-IN', {minimumFractionDigits: 2});
+                        document.getElementById('val_total_balance').innerText = '₹ ' + (fin.current_balance || 0).toLocaleString('en-IN', {minimumFractionDigits: 2});
+                        document.getElementById('val_cashback').innerText = '₹ ' + (fin.cashback_bonus || 0).toLocaleString('en-IN', {minimumFractionDigits: 2});
+                        document.getElementById('val_staking').innerText = '₹ ' + (fin.staking_bonus || 0).toLocaleString('en-IN', {minimumFractionDigits: 2});
+                        document.getElementById('val_sponsor').innerText = '₹ ' + (fin.sponsor_bonus || 0).toLocaleString('en-IN', {minimumFractionDigits: 2});
+                        document.getElementById('val_binary').innerText = '₹ ' + (fin.binary_bonus || 0).toLocaleString('en-IN', {minimumFractionDigits: 2});
+                        document.getElementById('val_repurchase').innerText = '₹ ' + (fin.repurchase_bonus || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})
+                        document.getElementById('val_royalty').innerText = '₹ ' + (fin.royalty_bonus || 0).toLocaleString('en-IN', {minimumFractionDigits: 2});
+                    }
+                })
+                .catch(error => console.error("Error fetching live data:", error));
+        });
+        
+        function sendUiNotification(title, message, isError = false) {
+            const container = document.getElementById('custom-toast-container');
+            if (container) {
+                const toast = document.createElement('div');
+                toast.style.cssText = `
+                    background: #ffffff; color: #1b2559; padding: 16px 24px; border-radius: 12px;
+                    box-shadow: 0 10px 25px rgba(11, 20, 55, 0.15); border-left: 5px solid ${isError ? '#ef4444' : '#1a73e8'};
+                    font-family: 'Inter', sans-serif; min-width: 300px; transform: translateX(120%);
+                    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); opacity: 0;
+                `;
+                toast.innerHTML = `
+                    <div style="font-weight: 800; font-size: 14px; margin-bottom: 4px; display: flex; align-items: center; gap: 8px;">
+                        <i class="fas ${isError ? 'fa-exclamation-circle' : 'fa-bell'}" style="color: ${isError ? '#ef4444' : '#1a73e8'};"></i> ${title}
+                    </div>
+                    <div style="font-size: 12px; font-weight: 500; color: #8f9bba; line-height: 1.4;">${message}</div>
+                `;
+                container.appendChild(toast);
+                setTimeout(() => { toast.style.transform = 'translateX(0)'; toast.style.opacity = '1'; }, 50);
+                setTimeout(() => {
+                    toast.style.transform = 'translateX(120%)'; toast.style.opacity = '0';
+                    setTimeout(() => toast.remove(), 400);
+                }, 4000);
+            }
+        }
+        
+        document.querySelector('a[href="/logout"]')?.addEventListener('click', function(e) {
+            e.preventDefault();
+            if (confirm("Are you sure you want to logout?")) {
+                localStorage.clear();
+                sessionStorage.clear();
+                window.location.href = "/logout";
+            }
+        });
+    </script>
+</body>
+</html>
