@@ -1,24 +1,27 @@
-from mysql.connector import Error
-import random
 import os
 import mysql.connector
+from mysql.connector import Error
 from mysql.connector import pooling
+import random
+
 try:
-db_pool = mysql.connector.pooling.MySQLConnectionPool(
-    pool_name="mlm_pool",
-    pool_size=32,
-    pool_reset_session=True,
-    host=os.getenv("MYSQLHOST"),
-    database=os.getenv("MYSQLDATABASE"),
-    user=os.getenv("MYSQLUSER"),
-    password=os.getenv("MYSQLPASSWORD"),
-    port=int(os.getenv("MYSQLPORT", 3306))
-)
+    db_pool = mysql.connector.pooling.MySQLConnectionPool(
+        pool_name="mlm_pool",
+        pool_size=32,
+        pool_reset_session=True,
+        host=os.getenv("MYSQLHOST"),
+        port=int(os.getenv("MYSQLPORT", 3306)),
+        database=os.getenv("MYSQLDATABASE"),
+        user=os.getenv("MYSQLUSER"),
+        password=os.getenv("MYSQLPASSWORD")
+    )
+
     print("Database Connection Pool initialized successfully.")
+
 except Error as e:
     print(f"Failed to initialize Connection Pool: {e}")
     db_pool = None
-
+    
 def get_db_connection():
     if not db_pool: return None
     try:
