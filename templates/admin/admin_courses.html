@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Course Management - Admin Panel</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root{--bg-color:#f4f7fe;--sidebar-bg:#0b1437;--card-bg:#ffffff;--text-main:#1b2559;--text-muted:#8f9bba;--c-blue:#2563eb;--c-green:#10b981;--c-red:#ef4444;--c-orange:#f97316;--c-purple:#8b5cf6;--border-color:#e2e8f0;--shadow:0 4px 6px rgba(0,0,0,0.02);--hover-shadow:0 12px 24px rgba(11,20,55,0.08);}
+        *{margin:0;padding:0;box-sizing:border-box;font-family:'Inter',sans-serif;}
+        body{background-color:var(--bg-color);color:var(--text-main);display:flex;height:100vh;overflow:hidden;}
+        .sidebar{width:260px;background-color:var(--sidebar-bg);color:white;display:flex;flex-direction:column;flex-shrink:0;z-index:100;overflow-y:auto;}
+        .sidebar::-webkit-scrollbar{width:4px;}.sidebar::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.1);border-radius:10px;}
+        .sidebar-header{padding:20px;display:flex;align-items:center;gap:15px;border-bottom:1px solid rgba(255,255,255,0.05);}
+        .sidebar-header img{width:45px;height:45px;border-radius:50%;border:2px solid white;}
+        .admin-info h3{font-size:14px;font-weight:700;color:white;}.admin-info p{font-size:11px;color:var(--c-green);display:flex;align-items:center;gap:5px;}
+        .admin-info p::before{content:'';display:block;width:6px;height:6px;background:var(--c-green);border-radius:50%;}
+        .sidebar-menu{list-style:none;padding:10px 0;}
+        .sidebar-menu li a{display:flex;align-items:center;padding:12px 20px;color:#a3aed1;text-decoration:none;font-size:13px;font-weight:500;transition:all .3s ease;justify-content:space-between;}
+        .sidebar-menu li a .menu-left{display:flex;align-items:center;}
+        .sidebar-menu li a:hover,.sidebar-menu li a.active{background-color:var(--c-blue);color:white;transform:translateX(5px);}
+        .sidebar-menu li a i.menu-icon{width:20px;margin-right:10px;font-size:14px;text-align:center;}
+        .main-content{flex:1;display:flex;flex-direction:column;overflow-y:auto;background-color:#f8f9fa;}
+        .top-header{background-color:var(--card-bg);padding:15px 30px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border-color);position:sticky;top:0;z-index:50;}
+        .page-title h1{font-size:22px;font-weight:700;}
+        .header-actions{display:flex;align-items:center;gap:20px;}
+        .icon-btn{color:var(--text-main);font-size:18px;cursor:pointer;position:relative;transition:all .2s;}.icon-btn:hover{color:var(--c-blue);transform:scale(1.1);}
+        .hbadge{position:absolute;top:-5px;right:-5px;background:var(--c-red);color:white;font-size:9px;padding:2px 5px;border-radius:50%;font-weight:bold;border:2px solid white;}
+        .admin-profile{display:flex;align-items:center;gap:10px;font-size:14px;font-weight:600;cursor:pointer;}
+        .admin-profile img{width:32px;height:32px;border-radius:50%;}
+        .dashboard-container{padding:20px 30px;}
+        /* Stats row */
+        .stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:15px;margin-bottom:20px;}
+        .stat-card{background:var(--card-bg);border-radius:12px;padding:20px;border:1px solid var(--border-color);box-shadow:var(--shadow);display:flex;align-items:center;gap:15px;transition:transform .3s,box-shadow .3s;}
+        .stat-card:hover{transform:translateY(-4px);box-shadow:var(--hover-shadow);}
+        .stat-icon{width:48px;height:48px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;}
+        .stat-details h4{font-size:12px;color:var(--text-muted);font-weight:600;margin-bottom:4px;}
+        .stat-details h2{font-size:22px;font-weight:800;color:var(--text-main);}
+        /* Course Grid */
+        .course-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:15px;margin-bottom:20px;}
+        .course-card{background:var(--card-bg);border-radius:12px;border:1px solid var(--border-color);box-shadow:var(--shadow);overflow:hidden;transition:transform .3s,box-shadow .3s;}
+        .course-card:hover{transform:translateY(-4px);box-shadow:var(--hover-shadow);}
+        .course-banner{height:140px;display:flex;align-items:center;justify-content:center;font-size:48px;}
+        .course-body{padding:15px;}
+        .course-title{font-size:15px;font-weight:800;color:var(--text-main);margin-bottom:6px;}
+        .course-meta{display:flex;gap:12px;margin-bottom:12px;}
+        .meta-item{font-size:11px;color:var(--text-muted);display:flex;align-items:center;gap:4px;}
+        .course-price{font-size:18px;font-weight:800;color:var(--c-blue);margin-bottom:12px;}
+        .course-actions{display:flex;gap:8px;}
+        .btn-sm{padding:6px 14px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;transition:.2s;border:none;display:flex;align-items:center;gap:5px;}
+        .btn-edit{background:rgba(37,99,235,.1);color:var(--c-blue);}.btn-edit:hover{background:var(--c-blue);color:white;}
+        .btn-del{background:rgba(239,68,68,.1);color:var(--c-red);}.btn-del:hover{background:var(--c-red);color:white;}
+        .course-status-toggle{display:flex;align-items:center;gap:8px;margin-bottom:10px;font-size:12px;font-weight:600;}
+        .toggle{position:relative;width:36px;height:20px;}.toggle input{opacity:0;width:0;height:0;}
+        .slider{position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:#cbd5e1;transition:.3s;border-radius:20px;}
+        .slider:before{position:absolute;content:'';height:14px;width:14px;left:3px;bottom:3px;background:white;transition:.3s;border-radius:50%;}
+        input:checked+.slider{background:var(--c-green);}
+        input:checked+.slider:before{transform:translateX(16px);}
+        .toolbar-card{background:var(--card-bg);border-radius:12px;padding:20px;border:1px solid var(--border-color);box-shadow:var(--shadow);display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;gap:15px;flex-wrap:wrap;}
+        .search-box{display:flex;align-items:center;background:var(--bg-color);padding:10px 15px;border-radius:8px;border:1px solid var(--border-color);width:300px;transition:all .3s;}
+        .search-box:focus-within{border-color:var(--c-blue);}
+        .search-box input{border:none;background:transparent;outline:none;margin-left:10px;width:100%;font-size:13px;}
+        .toolbar-actions{display:flex;gap:10px;}
+        .btn-outline{padding:9px 16px;border:1px solid var(--border-color);background:white;border-radius:6px;font-size:13px;font-weight:600;color:var(--text-main);cursor:pointer;display:flex;align-items:center;gap:8px;transition:.2s;}.btn-outline:hover{background:#f1f5f9;}
+        .btn-primary{padding:9px 16px;border:none;background:var(--c-blue);border-radius:6px;font-size:13px;font-weight:600;color:white;cursor:pointer;display:flex;align-items:center;gap:8px;transition:.2s;}.btn-primary:hover{background:#1d4ed8;}
+        select{padding:8px 12px;border:1px solid var(--border-color);border-radius:6px;font-size:13px;color:var(--text-main);background:white;cursor:pointer;}
+        /* Modal */
+        .modal-overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(11,20,55,.5);z-index:1000;justify-content:center;align-items:center;backdrop-filter:blur(4px);}
+        .modal-overlay.active{display:flex;animation:fadeIn .3s ease;}
+        .modal-card{background:white;width:600px;max-width:95vw;border-radius:16px;padding:30px;box-shadow:0 20px 40px rgba(0,0,0,.2);position:relative;max-height:90vh;overflow-y:auto;}
+        .modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:25px;}
+        .modal-title{font-size:18px;font-weight:800;}
+        .close-btn{background:none;border:none;font-size:20px;color:var(--text-muted);cursor:pointer;}.close-btn:hover{color:var(--c-red);}
+        .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:15px;}
+        .form-group{display:flex;flex-direction:column;gap:6px;}
+        .form-group.full{grid-column:1/-1;}
+        label{font-size:12px;font-weight:700;color:var(--text-muted);}
+        input[type=text],input[type=number],textarea,select.form-select{padding:10px 12px;border:1px solid var(--border-color);border-radius:8px;font-size:13px;color:var(--text-main);outline:none;transition:.2s;font-family:inherit;width:100%;}
+        input:focus,textarea:focus,select.form-select:focus{border-color:var(--c-blue);box-shadow:0 0 0 3px rgba(37,99,235,.1);}
+        .upload-area{border:2px dashed var(--border-color);border-radius:8px;padding:20px;text-align:center;cursor:pointer;transition:.2s;}
+        .upload-area:hover{border-color:var(--c-blue);background:rgba(37,99,235,.03);}
+        .upload-area i{font-size:24px;color:var(--text-muted);margin-bottom:8px;}
+        .modal-footer{display:flex;gap:10px;justify-content:flex-end;margin-top:25px;padding-top:20px;border-top:1px solid var(--border-color);}
+        @keyframes fadeIn{from{opacity:0;transform:scale(.95)}to{opacity:1;transform:scale(1)}}
+        .badge{padding:4px 10px;border-radius:6px;font-size:10px;font-weight:700;text-transform:uppercase;display:inline-flex;align-items:center;gap:4px;}
+        .b-active{background:rgba(16,185,129,.1);color:var(--c-green);}
+        .b-inactive{background:rgba(239,68,68,.1);color:var(--c-red);}
+    </style>
+</head>
+<body>
+<aside class="sidebar">
+    <div class="sidebar-header"><img src="https://i.pravatar.cc/150?img=47" alt="Admin"><div class="admin-info"><h3>Super Admin</h3><p>Online</p></div></div>
+    <ul class="sidebar-menu">
+        <li><a href="/admin/dashboard"><div class="menu-left"><i class="fas fa-home menu-icon"></i> Dashboard</div></a></li>
+        <li><a href="/admin/users"><div class="menu-left"><i class="fas fa-user-friends menu-icon"></i> User Management</div></a></li>
+        <li><a href="/admin/kyc"><div class="menu-left"><i class="fas fa-id-card menu-icon"></i> KYC Management</div></a></li>
+        <li><a href="/admin/courses" class="active"><div class="menu-left"><i class="fas fa-graduation-cap menu-icon"></i> Course Management</div></a></li>
+        <li><a href="/admin/packages"><div class="menu-left"><i class="fas fa-box menu-icon"></i> Package Management</div></a></li>
+        <li><a href="/admin/roi"><div class="menu-left"><i class="fas fa-chart-pie menu-icon"></i> ROI Management</div></a></li>
+        <li><a href="/admin/binary"><div class="menu-left"><i class="fas fa-sitemap menu-icon"></i> Binary Management</div></a></li>
+        <li><a href="/admin/direct-bonus"><div class="menu-left"><i class="fas fa-user-plus menu-icon"></i> Direct Bonus</div></a></li>
+        <li><a href="/admin/royalty"><div class="menu-left"><i class="fas fa-crown menu-icon"></i> Royalty Management</div></a></li>
+        <li><a href="/admin/wallets"><div class="menu-left"><i class="fas fa-wallet menu-icon"></i> Wallet Management</div></a></li>
+        <li><a href="/admin/deposits"><div class="menu-left"><i class="fas fa-arrow-down menu-icon"></i> Deposit Management</div></a></li>
+        <li><a href="/admin/withdrawals"><div class="menu-left"><i class="fas fa-money-check-alt menu-icon"></i> Withdrawal Management</div></a></li>
+        <li><a href="/admin/income-reports"><div class="menu-left"><i class="fas fa-chart-bar menu-icon"></i> Income Reports</div></a></li>
+        <li><a href="/admin/notifications"><div class="menu-left"><i class="fas fa-bell menu-icon"></i> Notifications</div></a></li>
+        <li><a href="/admin/support"><div class="menu-left"><i class="fas fa-headset menu-icon"></i> Support Tickets</div></a></li>
+        <li><a href="/admin/settings"><div class="menu-left"><i class="fas fa-cogs menu-icon"></i> System Settings</div></a></li>
+        <li><a href="/admin/audit-logs"><div class="menu-left"><i class="fas fa-file-alt menu-icon"></i> Audit &amp; Logs</div></a></li>
+        <li><a href="/admin/admins"><div class="menu-left"><i class="fas fa-user-shield menu-icon"></i> Admin Management</div></a></li>
+        <li><a href="/logout"><div class="menu-left"><i class="fas fa-sign-out-alt menu-icon"></i> Logout</div></a></li>
+    </ul>
+</aside>
+<main class="main-content">
+    <header class="top-header">
+        <div class="page-title"><h1>Course Management</h1></div>
+        <div class="header-actions">
+            <div class="icon-btn"><i class="fas fa-search"></i></div>
+            <div class="icon-btn"><i class="far fa-bell"></i><span class="hbadge">5</span></div>
+            <div class="admin-profile"><img src="https://i.pravatar.cc/150?img=47"> Admin <i class="fas fa-chevron-down" style="font-size:10px"></i></div>
+        </div>
+    </header>
+    <div class="dashboard-container">
+        <div class="stats-row">
+            <div class="stat-card"><div class="stat-icon" style="background:rgba(37,99,235,.1);color:var(--c-blue)"><i class="fas fa-graduation-cap"></i></div><div class="stat-details"><h4>Total Courses</h4><h2>12</h2></div></div>
+            <div class="stat-card"><div class="stat-icon" style="background:rgba(16,185,129,.1);color:var(--c-green)"><i class="fas fa-users"></i></div><div class="stat-details"><h4>Total Enrollments</h4><h2>18,430</h2></div></div>
+            <div class="stat-card"><div class="stat-icon" style="background:rgba(249,115,22,.1);color:var(--c-orange)"><i class="fas fa-rupee-sign"></i></div><div class="stat-details"><h4>Total Revenue</h4><h2>₹12,45,680</h2></div></div>
+            <div class="stat-card"><div class="stat-icon" style="background:rgba(139,92,246,.1);color:var(--c-purple)"><i class="fas fa-star"></i></div><div class="stat-details"><h4>Active Courses</h4><h2>9</h2></div></div>
+        </div>
+
+        <div class="toolbar-card">
+            <div class="search-box"><i class="fas fa-search" style="color:var(--text-muted)"></i><input type="text" placeholder="Search courses..."></div>
+            <div class="toolbar-actions">
+                <select><option>All Categories</option><option>Basic</option><option>Master</option><option>Advanced</option></select>
+                <select><option>All Status</option><option>Active</option><option>Inactive</option></select>
+                <button class="btn-primary" onclick="openModal('addCourseModal')"><i class="fas fa-plus"></i> Add Course</button>
+            </div>
+        </div>
+
+        <div class="course-grid">
+            <!-- Course Card 1 -->
+            <div class="course-card">
+                <div class="course-banner" style="background:linear-gradient(135deg,#2563eb,#1d4ed8)">📊</div>
+                <div class="course-body">
+                    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
+                        <span class="badge b-active">Active</span>
+                        <span style="font-size:11px;color:var(--text-muted)">Basic</span>
+                    </div>
+                    <div class="course-title">Business Foundation Course</div>
+                    <div class="course-meta">
+                        <span class="meta-item"><i class="fas fa-users"></i> 8,240 enrolled</span>
+                        <span class="meta-item"><i class="fas fa-clock"></i> 30 days</span>
+                    </div>
+                    <div class="course-status-toggle">
+                        <label class="toggle"><input type="checkbox" checked><span class="slider"></span></label>
+                        Visible in App
+                    </div>
+                    <div class="course-price">₹2,999</div>
+                    <div class="course-actions">
+                        <button class="btn-sm btn-edit" onclick="openModal('addCourseModal')"><i class="fas fa-edit"></i> Edit</button>
+                        <button class="btn-sm btn-del"><i class="fas fa-trash"></i> Delete</button>
+                        <button class="btn-sm" style="background:rgba(16,185,129,.1);color:var(--c-green)"><i class="fas fa-chart-bar"></i> Reports</button>
+                    </div>
+                </div>
+            </div>
+            <!-- Course Card 2 -->
+            <div class="course-card">
+                <div class="course-banner" style="background:linear-gradient(135deg,#10b981,#059669)">🎓</div>
+                <div class="course-body">
+                    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
+                        <span class="badge b-active">Active</span>
+                        <span style="font-size:11px;color:var(--text-muted)">Master</span>
+                    </div>
+                    <div class="course-title">MLM Mastery Program</div>
+                    <div class="course-meta">
+                        <span class="meta-item"><i class="fas fa-users"></i> 6,120 enrolled</span>
+                        <span class="meta-item"><i class="fas fa-clock"></i> 60 days</span>
+                    </div>
+                    <div class="course-status-toggle">
+                        <label class="toggle"><input type="checkbox" checked><span class="slider"></span></label>
+                        Visible in App
+                    </div>
+                    <div class="course-price">₹5,999</div>
+                    <div class="course-actions">
+                        <button class="btn-sm btn-edit" onclick="openModal('addCourseModal')"><i class="fas fa-edit"></i> Edit</button>
+                        <button class="btn-sm btn-del"><i class="fas fa-trash"></i> Delete</button>
+                        <button class="btn-sm" style="background:rgba(16,185,129,.1);color:var(--c-green)"><i class="fas fa-chart-bar"></i> Reports</button>
+                    </div>
+                </div>
+            </div>
+            <!-- Course Card 3 -->
+            <div class="course-card">
+                <div class="course-banner" style="background:linear-gradient(135deg,#8b5cf6,#7c3aed)">🚀</div>
+                <div class="course-body">
+                    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
+                        <span class="badge b-active">Active</span>
+                        <span style="font-size:11px;color:var(--text-muted)">Advanced</span>
+                    </div>
+                    <div class="course-title">Elite Leadership Advanced</div>
+                    <div class="course-meta">
+                        <span class="meta-item"><i class="fas fa-users"></i> 4,070 enrolled</span>
+                        <span class="meta-item"><i class="fas fa-clock"></i> 90 days</span>
+                    </div>
+                    <div class="course-status-toggle">
+                        <label class="toggle"><input type="checkbox" checked><span class="slider"></span></label>
+                        Visible in App
+                    </div>
+                    <div class="course-price">₹9,999</div>
+                    <div class="course-actions">
+                        <button class="btn-sm btn-edit" onclick="openModal('addCourseModal')"><i class="fas fa-edit"></i> Edit</button>
+                        <button class="btn-sm btn-del"><i class="fas fa-trash"></i> Delete</button>
+                        <button class="btn-sm" style="background:rgba(16,185,129,.1);color:var(--c-green)"><i class="fas fa-chart-bar"></i> Reports</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<!-- Add/Edit Course Modal -->
+<div class="modal-overlay" id="addCourseModal">
+    <div class="modal-card">
+        <div class="modal-header">
+            <div class="modal-title"><i class="fas fa-graduation-cap" style="color:var(--c-blue);margin-right:8px"></i> Add New Course</div>
+            <button class="close-btn" onclick="closeModal('addCourseModal')"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="form-grid">
+            <div class="form-group full"><label>Course Title</label><input type="text" placeholder="Enter course title"></div>
+            <div class="form-group"><label>Category</label><select class="form-select"><option>Basic</option><option>Master</option><option>Advanced</option></select></div>
+            <div class="form-group"><label>Price (₹)</label><input type="number" placeholder="0.00"></div>
+            <div class="form-group"><label>ROI %</label><input type="number" placeholder="e.g. 1.5"></div>
+            <div class="form-group"><label>Duration (Days)</label><input type="number" placeholder="e.g. 30"></div>
+            <div class="form-group full"><label>Description</label><textarea rows="3" placeholder="Course description..."></textarea></div>
+            <div class="form-group">
+                <label>Thumbnail</label>
+                <div class="upload-area"><i class="fas fa-image"></i><br><span style="font-size:12px;color:var(--text-muted)">Click to upload thumbnail</span></div>
+            </div>
+            <div class="form-group">
+                <label>Banner</label>
+                <div class="upload-area"><i class="fas fa-image"></i><br><span style="font-size:12px;color:var(--text-muted)">Click to upload banner</span></div>
+            </div>
+            <div class="form-group"><label>Status</label><select class="form-select"><option>Active</option><option>Inactive</option></select></div>
+            <div class="form-group"><label>App Visibility</label><select class="form-select"><option>Visible</option><option>Hidden</option></select></div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-outline" onclick="closeModal('addCourseModal')">Cancel</button>
+            <button class="btn-primary"><i class="fas fa-save"></i> Save Course</button>
+        </div>
+    </div>
+</div>
+<script>
+function openModal(id){document.getElementById(id).classList.add('active');}
+function closeModal(id){document.getElementById(id).classList.remove('active');}
+document.querySelectorAll('.modal-overlay').forEach(m=>m.addEventListener('click',function(e){if(e.target===this)this.classList.remove('active');}));
+</script>
+</body>
+</html>

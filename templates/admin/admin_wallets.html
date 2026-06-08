@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Wallets - Admin Panel</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --bg-color: #f4f7fe; --sidebar-bg: #0b1437; --sidebar-hover: #1b2559;
+            --card-bg: #ffffff; --text-main: #1b2559; --text-muted: #8f9bba;
+            --c-blue: #2563eb; --c-green: #10b981; --c-red: #ef4444; --c-orange: #f97316;
+            --border-color: #e2e8f0; --shadow: 0 4px 6px rgba(0, 0, 0, 0.02);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
+        body { background-color: var(--bg-color); color: var(--text-main); display: flex; height: 100vh; overflow: hidden; }
+
+        /* --- SIDEBAR --- */
+        .sidebar { width: 260px; background-color: var(--sidebar-bg); color: white; display: flex; flex-direction: column; flex-shrink: 0; z-index: 100; overflow-y: auto; }
+        .sidebar::-webkit-scrollbar { width: 4px; }
+        .sidebar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+        .sidebar-header { padding: 20px; display: flex; align-items: center; gap: 15px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .sidebar-header img { width: 45px; height: 45px; border-radius: 50%; border: 2px solid white; transition: transform 0.3s ease; }
+        .sidebar-header img:hover { transform: scale(1.1); }
+        .admin-info h3 { font-size: 14px; font-weight: 700; color: white; }
+        .admin-info p { font-size: 11px; color: var(--c-green); display: flex; align-items: center; gap: 5px; }
+        .admin-info p::before { content: ''; display: block; width: 6px; height: 6px; background: var(--c-green); border-radius: 50%; }
+        
+        .sidebar-menu { list-style: none; padding: 10px 0; }
+        .sidebar-menu li a { display: flex; align-items: center; padding: 12px 20px; color: #a3aed1; text-decoration: none; font-size: 13px; font-weight: 500; transition: all 0.3s ease; justify-content: space-between;}
+        .sidebar-menu li a .menu-left { display: flex; align-items: center; }
+        .sidebar-menu li a:hover, .sidebar-menu li a.active { background-color: var(--c-blue); color: white; transform: translateX(5px); }
+        .sidebar-menu li a i.menu-icon { width: 20px; margin-right: 10px; font-size: 14px; text-align: center; }
+        
+        .has-submenu { position: relative; }
+        .submenu { max-height: 0; overflow: hidden; transition: max-height 0.4s ease-out; background: rgba(0, 0, 0, 0.15); }
+        .has-submenu:hover .submenu { max-height: 400px; }
+        .has-submenu:hover > a .chevron { transform: rotate(180deg); }
+        .submenu li a { padding: 10px 20px 10px 45px; font-size: 12px; font-weight: 500; color: #8f9bba; border-left: 2px solid transparent; }
+        .submenu li a:hover, .submenu li a.sub-active { background: transparent; color: white; border-left: 2px solid var(--c-blue); transform: translateX(0); }
+        .submenu li a i { font-size: 12px; margin-right: 12px; width: 15px; }
+        .chevron { font-size: 10px; opacity: 0.5; transition: transform 0.3s ease; }
+
+        /* --- MAIN CONTENT --- */
+        .main-content { flex: 1; display: flex; flex-direction: column; overflow-y: auto; background-color: #f8f9fa; }
+        .top-header { background-color: var(--card-bg); padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); position: sticky; top: 0; z-index: 50; }
+        .page-title h1 { font-size: 22px; font-weight: 700; color: var(--text-main); }
+
+        /* --- WALLET TABLE UI --- */
+        .dashboard-container { padding: 20px 30px; }
+        .table-card { background: var(--card-bg); border-radius: 12px; box-shadow: var(--shadow); border: 1px solid var(--border-color); overflow: hidden; }
+        
+        .table-toolbar { padding: 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); }
+        .search-box { display: flex; align-items: center; background: var(--bg-color); padding: 10px 15px; border-radius: 8px; border: 1px solid var(--border-color); width: 320px; }
+        .search-box:focus-within { border-color: var(--c-blue); }
+        .search-box input { border: none; background: transparent; outline: none; margin-left: 10px; width: 100%; font-size: 13px; color: var(--text-main); }
+        
+        table { width: 100%; border-collapse: collapse; }
+        th { text-align: left; padding: 15px 20px; font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; background: #f8fafc; border-bottom: 1px solid var(--border-color); }
+        td { padding: 16px 20px; font-size: 13px; font-weight: 600; color: var(--text-main); border-bottom: 1px solid var(--border-color); vertical-align: middle; }
+        tr:hover td { background-color: #f1f5f9; }
+
+        .user-cell { display: flex; align-items: center; gap: 12px; }
+        .user-avatar { width: 36px; height: 36px; border-radius: 50%; background: rgba(37, 99, 235, 0.1); color: var(--c-blue); display: flex; justify-content: center; align-items: center; font-weight: 700; font-size: 14px; }
+        
+        .amount-green { color: var(--c-green); font-weight: 800; font-size: 14px; }
+        
+        .btn-action { padding: 8px 14px; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer; border: none; background: var(--c-blue); color: white; display: flex; align-items: center; gap: 6px; transition: 0.2s; }
+        .btn-action:hover { background: #1d4ed8; transform: translateY(-2px); }
+
+        /* --- MODAL (POPUP) UI --- */
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(11, 20, 55, 0.5); z-index: 1000; justify-content: center; align-items: center; backdrop-filter: blur(4px); }
+        .modal-overlay.active { display: flex; animation: fadeIn 0.3s ease; }
+        
+        .modal-card { background: white; width: 400px; border-radius: 16px; padding: 30px; box-shadow: 0 20px 40px rgba(0,0,0,0.2); position: relative; }
+        .close-btn { position: absolute; top: 20px; right: 20px; font-size: 20px; color: var(--text-muted); cursor: pointer; border: none; background: none; }
+        .close-btn:hover { color: var(--c-red); }
+        
+        .modal-title { font-size: 18px; font-weight: 800; color: var(--text-main); margin-bottom: 5px; }
+        .modal-subtitle { font-size: 12px; color: var(--text-muted); margin-bottom: 25px; }
+        
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; font-size: 12px; font-weight: 700; color: var(--text-main); margin-bottom: 8px; }
+        .form-control { width: 100%; padding: 12px 15px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 14px; outline: none; transition: 0.2s; }
+        .form-control:focus { border-color: var(--c-blue); box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
+        
+        .type-toggle { display: flex; background: #f1f5f9; border-radius: 8px; padding: 4px; margin-bottom: 20px; }
+        .toggle-btn { flex: 1; padding: 10px; border: none; background: transparent; font-size: 13px; font-weight: 700; color: var(--text-muted); border-radius: 6px; cursor: pointer; transition: 0.2s; }
+        .toggle-btn.active.credit { background: white; color: var(--c-green); box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .toggle-btn.active.debit { background: white; color: var(--c-red); box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+
+        .btn-submit { width: 100%; padding: 14px; border: none; background: var(--c-blue); color: white; font-weight: 700; border-radius: 8px; cursor: pointer; margin-top: 10px; font-size: 14px; }
+        .btn-submit:hover { background: #1d4ed8; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+    </style>
+</head>
+<body>
+
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <img src="https://i.pravatar.cc/150?img=47" alt="Admin">
+            <div class="admin-info">
+                <h3>Super Admin</h3>
+                <p>Online</p>
+            </div>
+        </div>
+         <ul class="sidebar-menu">
+            <li><a href="/admin/dashboard"><div class="menu-left"><i class="fas fa-home menu-icon"></i> Dashboard</div></a></li>
+            
+            <li class="has-submenu">
+                <a href="#" class="active" style="cursor: default;">
+                    <div class="menu-left"><i class="fas fa-user-friends menu-icon"></i> User Management</div>
+                    <i class="fas fa-chevron-down chevron" style="transform: rotate(180deg);"></i>
+                </a>
+                <ul class="submenu">
+                    <li><a href="/admin/users" class="sub-active"><i class="fas fa-list"></i> All Users List</a></li>
+                    <li><a href="/admin/tree"><i class="fas fa-sitemap"></i> Tree & Placement</a></li>
+                    <li><a href="/admin/wallets"><i class="fas fa-wallet"></i> User Wallets</a></li>
+                    <li><a href="/admin/security"><i class="fas fa-key"></i> Passwords & Security</a></li>
+                </ul>
+            </li>
+
+            <li><a href="#"><div class="menu-left"><i class="fas fa-graduation-cap menu-icon"></i> Course Management</div> <i class="fas fa-chevron-right chevron"></i></a></li>
+            <li><a href="#"><div class="menu-left"><i class="fas fa-chart-pie menu-icon"></i> ROI Management</div> <i class="fas fa-chevron-right chevron"></i></a></li>
+            <li><a href="#"><div class="menu-left"><i class="fas fa-sitemap menu-icon"></i> Binary Management</div> <i class="fas fa-chevron-right chevron"></i></a></li>
+            <li><a href="#"><div class="menu-left"><i class="fas fa-user-plus menu-icon"></i> Direct Bonus</div> <i class="fas fa-chevron-right chevron"></i></a></li>
+            <li><a href="#"><div class="menu-left"><i class="fas fa-sync menu-icon"></i> Repurchase Bonus</div> <i class="fas fa-chevron-right chevron"></i></a></li>
+            <li><a href="#"><div class="menu-left"><i class="fas fa-crown menu-icon"></i> Royalty Management</div> <i class="fas fa-chevron-right chevron"></i></a></li>
+            <li><a href="#"><div class="menu-left"><i class="fas fa-wallet menu-icon"></i> Wallet Management</div> <i class="fas fa-chevron-right chevron"></i></a></li>
+            <li><a href="#"><div class="menu-left"><i class="fas fa-money-check-alt menu-icon"></i> Withdrawal Management</div> <i class="fas fa-chevron-right chevron"></i></a></li>
+            <li><a href="#"><div class="menu-left"><i class="fas fa-chart-bar menu-icon"></i> Income Reports</div> <i class="fas fa-chevron-right chevron"></i></a></li>
+            <li><a href="#"><div class="menu-left"><i class="fas fa-id-card menu-icon"></i> KYC Management</div> <i class="fas fa-chevron-right chevron"></i></a></li>
+            <li><a href="#"><div class="menu-left"><i class="fas fa-bell menu-icon"></i> Notification</div></a></li>
+            <li><a href="#"><div class="menu-left"><i class="fas fa-headset menu-icon"></i> Support Tickets</div> <i class="fas fa-chevron-right chevron"></i></a></li>
+            <li><a href="#"><div class="menu-left"><i class="fas fa-calendar-alt menu-icon"></i> Holiday Management</div> <i class="fas fa-chevron-right chevron"></i></a></li>
+            <li><a href="#"><div class="menu-left"><i class="fas fa-cogs menu-icon"></i> System Settings</div> <i class="fas fa-chevron-right chevron"></i></a></li>
+            <li><a href="#"><div class="menu-left"><i class="fas fa-clock menu-icon"></i> Cron Job Management</div> <i class="fas fa-chevron-right chevron"></i></a></li>
+            <li><a href="#"><div class="menu-left"><i class="fas fa-file-alt menu-icon"></i> Audit & Logs</div> <i class="fas fa-chevron-right chevron"></i></a></li>
+            <li><a href="#"><div class="menu-left"><i class="fas fa-user-shield menu-icon"></i> Admin Management</div> <i class="fas fa-chevron-right chevron"></i></a></li>
+            <li><a href="/logout" style="margin-top:20px; color: var(--c-red);"><div class="menu-left"><i class="fas fa-sign-out-alt menu-icon"></i> Logout</div></a></li>
+        </ul>
+    </aside>
+
+    <main class="main-content">
+        <header class="top-header">
+            <div class="page-title">
+                <h1>User Wallets & Balances</h1>
+            </div>
+        </header>
+
+        <div class="dashboard-container">
+            <div class="table-card">
+                
+                <div class="table-toolbar">
+                    <div class="search-box">
+                        <i class="fas fa-search" style="color: var(--text-muted)"></i>
+                        <input type="text" id="searchInput" placeholder="Search by User ID or Name..." onkeyup="filterTable()">
+                    </div>
+                </div>
+
+                <table id="walletTable">
+                    <thead>
+                        <tr>
+                            <th>User Details</th>
+                            <th>Total Earned</th>
+                            <th>Total Withdrawn</th>
+                            <th>Current Balance</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>
+                                <div class="user-cell">
+                                    <img src="https://i.pravatar.cc/150?img=11" style="width:36px; border-radius:50%;">
+                                    <div>
+                                        <div style="font-weight: 700; color: var(--text-main);">Ravi Kumar</div>
+                                        <div style="font-size: 11px; color: var(--text-muted);">MLM10001</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>₹ 1,25,450</td>
+                            <td>₹ 68,750</td>
+                            <td class="amount-green">₹ 56,700</td>
+                            <td>
+                                <button class="btn-action" onclick="openModal('MLM10001', 'Ravi Kumar')">
+                                    <i class="fas fa-exchange-alt"></i> Adjust Wallet
+                                </button>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <div class="user-cell">
+                                    <div class="user-avatar" style="background: rgba(239, 68, 68, 0.1); color: var(--c-red);">P</div>
+                                    <div>
+                                        <div style="font-weight: 700; color: var(--text-main);">Priya Sharma</div>
+                                        <div style="font-size: 11px; color: var(--text-muted);">MLM10293</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>₹ 45,200</td>
+                            <td>₹ 45,200</td>
+                            <td class="amount-green">₹ 0</td>
+                            <td>
+                                <button class="btn-action" onclick="openModal('MLM10293', 'Priya Sharma')">
+                                    <i class="fas fa-exchange-alt"></i> Adjust Wallet
+                                </button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <div class="modal-overlay" id="walletModal">
+        <div class="modal-card">
+            <button class="close-btn" onclick="closeModal()"><i class="fas fa-times"></i></button>
+            <h2 class="modal-title">Manual Wallet Adjustment</h2>
+            <p class="modal-subtitle">Target User: <strong id="modalUserName" style="color:var(--c-blue)"></strong></p>
+
+            <form id="walletForm" onsubmit="event.preventDefault(); alert('Transaction processed successfully!'); closeModal();">
+                
+                <div class="type-toggle">
+                    <button type="button" class="toggle-btn active credit" id="btnCredit" onclick="setTxType('credit')">Credit (Add)</button>
+                    <button type="button" class="toggle-btn debit" id="btnDebit" onclick="setTxType('debit')">Debit (Deduct)</button>
+                </div>
+                
+                <input type="hidden" id="txType" value="credit">
+
+                <div class="form-group">
+                    <label>Amount (₹)</label>
+                    <input type="number" class="form-control" placeholder="Enter amount" required min="1">
+                </div>
+
+                <div class="form-group">
+                    <label>Transaction Remark / Reason</label>
+                    <input type="text" class="form-control" placeholder="e.g., Manual Reward Bonus" required>
+                </div>
+
+                <button type="submit" class="btn-submit">Confirm Transaction</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function filterTable() {
+            let input = document.getElementById("searchInput").value.toUpperCase();
+            let table = document.getElementById("walletTable");
+            let tr = table.getElementsByTagName("tr");
+            for (let i = 1; i < tr.length; i++) {
+                let textContent = tr[i].textContent || tr[i].innerText;
+                tr[i].style.display = textContent.toUpperCase().indexOf(input) > -1 ? "" : "none";
+            }
+        }
+
+        // Modal Logic
+        function openModal(userId, userName) {
+            document.getElementById('modalUserName').innerText = `${userName} (${userId})`;
+            document.getElementById('walletModal').classList.add('active');
+        }
+
+        function closeModal() {
+            document.getElementById('walletModal').classList.remove('active');
+            document.getElementById('walletForm').reset();
+            setTxType('credit'); // Reset to default
+        }
+
+        function setTxType(type) {
+            document.getElementById('txType').value = type;
+            const btnC = document.getElementById('btnCredit');
+            const btnD = document.getElementById('btnDebit');
+            
+            if(type === 'credit') {
+                btnC.classList.add('active');
+                btnD.classList.remove('active');
+            } else {
+                btnD.classList.add('active');
+                btnC.classList.remove('active');
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Management - Admin Panel</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --bg-color: #f4f7fe; --sidebar-bg: #0b1437; --sidebar-hover: #1b2559;
+            --card-bg: #ffffff; --text-main: #1b2559; --text-muted: #8f9bba;
+            --c-blue: #2563eb; --c-green: #10b981; --c-red: #ef4444; --c-orange: #f97316;
+            --border-color: #e2e8f0; --shadow: 0 4px 6px rgba(0, 0, 0, 0.02);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
+        body { background-color: var(--bg-color); color: var(--text-main); display: flex; height: 100vh; overflow: hidden; }
+
+        /* --- SIDEBAR --- */
+        .sidebar { width: 260px; background-color: var(--sidebar-bg); color: white; display: flex; flex-direction: column; flex-shrink: 0; z-index: 100; overflow-y: auto; }
+        .sidebar::-webkit-scrollbar { width: 4px; }
+        .sidebar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+        .sidebar-header { padding: 20px; display: flex; align-items: center; gap: 15px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .sidebar-header img { width: 45px; height: 45px; border-radius: 50%; border: 2px solid white; transition: transform 0.3s ease; }
+        .sidebar-header img:hover { transform: scale(1.1); }
+        .admin-info h3 { font-size: 14px; font-weight: 700; color: white; }
+        .admin-info p { font-size: 11px; color: var(--c-green); display: flex; align-items: center; gap: 5px; }
+        .admin-info p::before { content: ''; display: block; width: 6px; height: 6px; background: var(--c-green); border-radius: 50%; }
+        
+        .sidebar-menu { list-style: none; padding: 10px 0; }
+        .sidebar-menu li a { display: flex; align-items: center; padding: 12px 20px; color: #a3aed1; text-decoration: none; font-size: 13px; font-weight: 500; transition: all 0.3s ease; justify-content: space-between;}
+        .sidebar-menu li a .menu-left { display: flex; align-items: center; }
+        .sidebar-menu li a:hover, .sidebar-menu li a.active { background-color: var(--c-blue); color: white; transform: translateX(5px); }
+        .sidebar-menu li a i.menu-icon { width: 20px; margin-right: 10px; font-size: 14px; text-align: center; }
+        
+        /* HOVER DROPDOWN MENU (Only applied to User Management) */
+        .has-submenu { position: relative; }
+        .submenu { max-height: 0; overflow: hidden; transition: max-height 0.4s ease-out; background: rgba(0, 0, 0, 0.15); }
+        .has-submenu:hover .submenu { max-height: 250px; }
+        .has-submenu:hover > a .chevron { transform: rotate(180deg); }
+        .submenu li a { padding: 10px 20px 10px 45px; font-size: 12px; font-weight: 500; color: #8f9bba; border-left: 2px solid transparent; }
+        .submenu li a:hover, .submenu li a.sub-active { background: transparent; color: white; border-left: 2px solid var(--c-blue); transform: translateX(0); }
+        .submenu li a i { font-size: 12px; margin-right: 12px; width: 15px; }
+        .chevron { font-size: 10px; opacity: 0.5; transition: transform 0.3s ease; }
+
+        /* --- MAIN CONTENT --- */
+        .main-content { flex: 1; display: flex; flex-direction: column; overflow-y: auto; background-color: #f8f9fa; }
+        .top-header { background-color: var(--card-bg); padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); position: sticky; top: 0; z-index: 50; }
+        .page-title h1 { font-size: 22px; font-weight: 700; color: var(--text-main); }
+
+        /* --- TABLE UI --- */
+        .dashboard-container { padding: 20px 30px; }
+        .table-card { background: var(--card-bg); border-radius: 12px; box-shadow: var(--shadow); border: 1px solid var(--border-color); overflow: visible; }
+        
+        .table-toolbar { padding: 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); }
+        .search-box { display: flex; align-items: center; background: var(--bg-color); padding: 10px 15px; border-radius: 8px; border: 1px solid var(--border-color); width: 320px; transition: all 0.3s ease; }
+        .search-box:focus-within { border-color: var(--c-blue); box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
+        .search-box input { border: none; background: transparent; outline: none; margin-left: 10px; width: 100%; font-size: 13px; color: var(--text-main); }
+        
+        .toolbar-actions { display: flex; gap: 12px; }
+        .btn-outline { padding: 8px 16px; border: 1px solid var(--border-color); background: white; border-radius: 6px; font-size: 13px; font-weight: 600; color: var(--text-main); cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 8px; }
+        .btn-outline:hover { background: #f1f5f9; border-color: #cbd5e1; }
+        .btn-primary { padding: 8px 16px; border: none; background: var(--c-blue); border-radius: 6px; font-size: 13px; font-weight: 600; color: white; cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 8px; }
+        .btn-primary:hover { background: #1d4ed8; }
+
+        table { width: 100%; border-collapse: collapse; }
+        th { text-align: left; padding: 15px 20px; font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; background: #f8fafc; border-bottom: 1px solid var(--border-color); }
+        td { padding: 16px 20px; font-size: 13px; font-weight: 500; color: var(--text-main); border-bottom: 1px solid var(--border-color); vertical-align: middle; transition: background 0.2s; }
+        tr:hover td { background-color: #f1f5f9; }
+
+        .user-cell { display: flex; align-items: center; gap: 12px; }
+        .user-avatar { width: 36px; height: 36px; border-radius: 50%; background: rgba(37, 99, 235, 0.1); color: var(--c-blue); display: flex; justify-content: center; align-items: center; font-weight: 700; font-size: 14px; }
+        .user-name { font-weight: 700; color: var(--text-main); margin-bottom: 2px; }
+        .user-id { font-size: 11px; color: var(--c-blue); font-weight: 600; }
+
+        .badge { padding: 4px 10px; border-radius: 6px; font-size: 10px; font-weight: 700; text-transform: uppercase; display: inline-flex; align-items: center; gap: 4px; }
+        .b-active { background: rgba(16, 185, 129, 0.1); color: var(--c-green); }
+        .b-inactive { background: rgba(239, 68, 68, 0.1); color: var(--c-red); }
+
+        /* 🌟 THE HYBRID ACTION MENU 🌟 */
+        .action-cell-hybrid { display: flex; gap: 6px; align-items: center; }
+        .btn-icon { width: 32px; height: 32px; border-radius: 8px; border: none; background: transparent; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; font-size: 14px; }
+        
+        .btn-view { color: var(--c-blue); }
+        .btn-view:hover { background: rgba(37, 99, 235, 0.1); transform: translateY(-2px); }
+        .btn-wallet { color: var(--c-green); }
+        .btn-wallet:hover { background: rgba(16, 185, 129, 0.1); transform: translateY(-2px); }
+        .btn-more { color: var(--text-muted); }
+        .btn-more:hover { background: #e2e8f0; color: var(--text-main); transform: translateY(-2px); }
+
+        .dropdown-wrapper { position: relative; }
+        .action-menu { display: none; position: absolute; right: 0; top: 100%; margin-top: 5px; width: 200px; background: white; border-radius: 10px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); border: 1px solid var(--border-color); z-index: 1000; padding: 8px 0; }
+        .action-menu.show { display: block; animation: fadeIn 0.2s ease; }
+        
+        .action-menu a { display: flex; align-items: center; gap: 10px; padding: 10px 16px; font-size: 13px; font-weight: 500; color: var(--text-main); text-decoration: none; transition: 0.2s; }
+        .action-menu a:hover { background: #f8fafc; color: var(--c-blue); }
+        .action-menu a i { width: 16px; color: var(--text-muted); transition: 0.2s; }
+        .action-menu a:hover i { color: var(--c-blue); }
+        
+        .menu-divider { height: 1px; background: var(--border-color); margin: 6px 0; }
+        .text-danger:hover { color: var(--c-red) !important; background: rgba(239, 68, 68, 0.05) !important; }
+        .text-danger:hover i { color: var(--c-red) !important; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body>
+
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <img src="https://i.pravatar.cc/150?img=47" alt="Admin">
+            <div class="admin-info">
+                <h3>Super Admin</h3>
+                <p>Online</p>
+            </div>
+        </div>
+        <ul class="sidebar-menu">
+            <li><a href="/admin/dashboard"><div class="menu-left"><i class="fas fa-home menu-icon"></i> Dashboard</div></a></li>
+            
+            <li class="has-submenu">
+                <a href="#" class="active" style="cursor: default;">
+                    <div class="menu-left"><i class="fas fa-user-friends menu-icon"></i> User Management</div>
+                    <i class="fas fa-chevron-down chevron" style="transform: rotate(180deg);"></i>
+                </a>
+                <ul class="submenu">
+                    <li><a href="/admin/users" class="sub-active"><i class="fas fa-list"></i> All Users List</a></li>
+                    <li><a href="/admin/tree"><i class="fas fa-sitemap"></i> Tree & Placement</a></li>
+                    <li><a href="/admin/wallets"><i class="fas fa-wallet"></i> User Wallets</a></li>
+                    <li><a href="/admin/security"><i class="fas fa-key"></i> Passwords & Security</a></li>
+                </ul>
+            </li>
+
+            <li><a href="#"><div class="menu-left"><i class="fas fa-graduation-cap menu-icon"></i> Course Management</div> <i class="fas fa-chevron-right chevron"></i></a></li>
+            <li><a href="#"><div class="menu-left"><i class="fas fa-chart-pie menu-icon"></i> ROI Management</div> <i class="fas fa-chevron-right chevron"></i></a></li>
+            <li><a href="#"><div class="menu-left"><i class="fas fa-sitemap menu-icon"></i> Binary Management</div> <i class="fas fa-chevron-right chevron"></i></a></li>
+            <li><a href="#"><div class="menu-left"><i class="fas fa-user-plus menu-icon"></i> Direct Bonus</div> <i class="fas fa-chevron-right chevron"></i></a></li>
+            <li><a href="#"><div class="menu-left"><i class="fas fa-sync menu-icon"></i> Repurchase Bonus</div> <i class="fas fa-chevron-right chevron"></i></a></li>
+            <li><a href="#"><div class="menu-left"><i class="fas fa-crown menu-icon"></i> Royalty Management</div> <i class="fas fa-chevron-right chevron"></i></a></li>
+            <li><a href="#"><div class="menu-left"><i class="fas fa-wallet menu-icon"></i> Wallet Management</div> <i class="fas fa-chevron-right chevron"></i></a></li>
+            <li><a href="#"><div class="menu-left"><i class="fas fa-money-check-alt menu-icon"></i> Withdrawal Management</div> <i class="fas fa-chevron-right chevron"></i></a></li>
+            <li><a href="#"><div class="menu-left"><i class="fas fa-chart-bar menu-icon"></i> Income Reports</div> <i class="fas fa-chevron-right chevron"></i></a></li>
+            <li><a href="#"><div class="menu-left"><i class="fas fa-id-card menu-icon"></i> KYC Management</div> <i class="fas fa-chevron-right chevron"></i></a></li>
+            <li><a href="#"><div class="menu-left"><i class="fas fa-bell menu-icon"></i> Notification</div></a></li>
+            <li><a href="#"><div class="menu-left"><i class="fas fa-headset menu-icon"></i> Support Tickets</div> <i class="fas fa-chevron-right chevron"></i></a></li>
+            <li><a href="#"><div class="menu-left"><i class="fas fa-calendar-alt menu-icon"></i> Holiday Management</div> <i class="fas fa-chevron-right chevron"></i></a></li>
+            <li><a href="#"><div class="menu-left"><i class="fas fa-cogs menu-icon"></i> System Settings</div> <i class="fas fa-chevron-right chevron"></i></a></li>
+            <li><a href="#"><div class="menu-left"><i class="fas fa-clock menu-icon"></i> Cron Job Management</div> <i class="fas fa-chevron-right chevron"></i></a></li>
+            <li><a href="#"><div class="menu-left"><i class="fas fa-file-alt menu-icon"></i> Audit & Logs</div> <i class="fas fa-chevron-right chevron"></i></a></li>
+            <li><a href="#"><div class="menu-left"><i class="fas fa-user-shield menu-icon"></i> Admin Management</div> <i class="fas fa-chevron-right chevron"></i></a></li>
+            <li><a href="/logout" style="margin-top:20px; color: var(--c-red);"><div class="menu-left"><i class="fas fa-sign-out-alt menu-icon"></i> Logout</div></a></li>
+        </ul>
+    </aside>
+
+    <main class="main-content">
+        <header class="top-header">
+            <div class="page-title">
+                <h1>All Users List</h1>
+            </div>
+        </header>
+
+        <div class="dashboard-container">
+            <div class="table-card">
+                
+                <div class="table-toolbar">
+                    <div class="search-box">
+                        <i class="fas fa-search" style="color: var(--text-muted)"></i>
+                        <input type="text" id="searchInput" placeholder="Search by User ID, Name, or Mobile..." onkeyup="filterTable()">
+                    </div>
+                    <div class="toolbar-actions">
+                        <button class="btn-outline"><i class="fas fa-filter"></i> Filter</button>
+                        <button class="btn-outline"><i class="fas fa-download"></i> Export CSV</button>
+                        <button class="btn-primary"><i class="fas fa-plus"></i> Add User</button>
+                    </div>
+                </div>
+
+                <table id="usersTable">
+                    <thead>
+                        <tr>
+                            <th>User Details</th>
+                            <th>Contact Info</th>
+                            <th>Sponsor ID</th>
+                            <th>Joined Date</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for user in users %}
+                        <tr>
+                            <td>
+                                <div class="user-cell">
+                                    <div class="user-avatar">{{ user.full_name[0] | upper }}</div>
+                                    <div>
+                                        <div class="user-name">{{ user.full_name }}</div>
+                                        <div class="user-id">{{ user.user_code }}</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <div><i class="fas fa-phone-alt" style="font-size:10px; color:var(--text-muted); margin-right:5px;"></i> {{ user.mobile }}</div>
+                                <div style="font-size: 11px; color: var(--text-muted); margin-top:2px;">{{ user.email }}</div>
+                            </td>
+                            <td style="font-weight: 600;">{{ user.sponsor_id | default('ADMIN', true) }}</td>
+                            <td>{{ user.joined }}</td>
+                            <td>
+                                {% if user.is_active %}
+                                    <span class="badge b-active"><i class="fas fa-check-circle"></i> Active</span>
+                                {% else %}
+                                    <span class="badge b-inactive"><i class="fas fa-times-circle"></i> Blocked</span>
+                                {% endif %}
+                            </td>
+                            
+                            <td>
+                                <div class="action-cell-hybrid">
+                                    <button class="btn-icon btn-view" title="View Profile & Tree"><i class="far fa-eye"></i></button>
+                                    <button class="btn-icon btn-wallet" title="Wallet Management"><i class="fas fa-wallet"></i></button>
+                                    
+                                    <div class="dropdown-wrapper">
+                                        <button class="btn-icon btn-more" onclick="toggleMenu('menu-{{ user.id }}')" title="More Actions"><i class="fas fa-ellipsis-v"></i></button>
+                                        
+                                        <div id="menu-{{ user.id }}" class="action-menu">
+                                            <a href="#"><i class="fas fa-graduation-cap"></i> Purchased Courses</a>
+                                            <a href="#"><i class="fas fa-exchange-alt"></i> Change Sponsor</a>
+                                            <a href="#"><i class="fas fa-key"></i> Reset Password</a>
+                                            <a href="#"><i class="fas fa-hand-holding-usd"></i> Manual Credit</a>
+                                            <div class="menu-divider"></div>
+                                            {% if user.is_active %}
+                                                <a href="#" class="text-danger"><i class="fas fa-ban"></i> Block User</a>
+                                            {% else %}
+                                                <a href="#" style="color: var(--c-green);"><i class="fas fa-check"></i> Unblock User</a>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+
+                        {% if not users %}
+                        <tr>
+                            <td>
+                                <div class="user-cell">
+                                    <img src="https://i.pravatar.cc/150?img=11" class="user-avatar" style="padding:0;">
+                                    <div>
+                                        <div class="user-name">Ravi Kumar</div>
+                                        <div class="user-id">MLM84729</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <div><i class="fas fa-phone-alt" style="font-size:10px; color:var(--text-muted); margin-right:5px;"></i> 9876543210</div>
+                                <div style="font-size: 11px; color: var(--text-muted); margin-top:2px;">ravi.k@example.com</div>
+                            </td>
+                            <td style="font-weight: 600;">MLM10001</td>
+                            <td>20 May 2024</td>
+                            <td><span class="badge b-active"><i class="fas fa-check-circle"></i> Active</span></td>
+                            <td>
+                                <div class="action-cell-hybrid">
+                                    <button class="btn-icon btn-view" title="View Profile & Tree"><i class="far fa-eye"></i></button>
+                                    <button class="btn-icon btn-wallet" title="Wallet Management"><i class="fas fa-wallet"></i></button>
+                                    <div class="dropdown-wrapper">
+                                        <button class="btn-icon btn-more" onclick="toggleMenu('menu-demo-1')" title="More Actions"><i class="fas fa-ellipsis-v"></i></button>
+                                        <div id="menu-demo-1" class="action-menu">
+                                            <a href="#"><i class="fas fa-graduation-cap"></i> Purchased Courses</a>
+                                            <a href="#"><i class="fas fa-exchange-alt"></i> Change Sponsor</a>
+                                            <a href="#"><i class="fas fa-key"></i> Reset Password</a>
+                                            <a href="#"><i class="fas fa-hand-holding-usd"></i> Manual Credit</a>
+                                            <div class="menu-divider"></div>
+                                            <a href="#" class="text-danger"><i class="fas fa-ban"></i> Block User</a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <div class="user-cell">
+                                    <div class="user-avatar" style="background: rgba(239, 68, 68, 0.1); color: var(--c-red);">P</div>
+                                    <div>
+                                        <div class="user-name">Priya Sharma</div>
+                                        <div class="user-id">MLM10293</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <div><i class="fas fa-phone-alt" style="font-size:10px; color:var(--text-muted); margin-right:5px;"></i> 9123456789</div>
+                                <div style="font-size: 11px; color: var(--text-muted); margin-top:2px;">priya.s@example.com</div>
+                            </td>
+                            <td style="font-weight: 600;">MLM84729</td>
+                            <td>18 May 2024</td>
+                            <td><span class="badge b-inactive"><i class="fas fa-times-circle"></i> Blocked</span></td>
+                            <td>
+                                <div class="action-cell-hybrid">
+                                    <button class="btn-icon btn-view" title="View Profile & Tree"><i class="far fa-eye"></i></button>
+                                    <button class="btn-icon btn-wallet" title="Wallet Management"><i class="fas fa-wallet"></i></button>
+                                    <div class="dropdown-wrapper">
+                                        <button class="btn-icon btn-more" onclick="toggleMenu('menu-demo-2')" title="More Actions"><i class="fas fa-ellipsis-v"></i></button>
+                                        <div id="menu-demo-2" class="action-menu">
+                                            <a href="#"><i class="fas fa-graduation-cap"></i> Purchased Courses</a>
+                                            <a href="#"><i class="fas fa-exchange-alt"></i> Change Sponsor</a>
+                                            <a href="#"><i class="fas fa-key"></i> Reset Password</a>
+                                            <a href="#"><i class="fas fa-hand-holding-usd"></i> Manual Credit</a>
+                                            <div class="menu-divider"></div>
+                                            <a href="#" style="color: var(--c-green);"><i class="fas fa-check"></i> Unblock User</a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        function filterTable() {
+            let input = document.getElementById("searchInput").value.toUpperCase();
+            let table = document.getElementById("usersTable");
+            let tr = table.getElementsByTagName("tr");
+
+            for (let i = 1; i < tr.length; i++) {
+                let textContent = tr[i].textContent || tr[i].innerText;
+                tr[i].style.display = textContent.toUpperCase().indexOf(input) > -1 ? "" : "none";
+            }
+        }
+
+        function toggleMenu(menuId) {
+            document.querySelectorAll('.action-menu').forEach(menu => {
+                if(menu.id !== menuId) menu.classList.remove('show');
+            });
+            document.getElementById(menuId).classList.toggle('show');
+        }
+
+        window.onclick = function(event) {
+            if (!event.target.matches('.btn-more') && !event.target.matches('.fas.fa-ellipsis-v')) {
+                document.querySelectorAll('.action-menu').forEach(menu => {
+                    menu.classList.remove('show');
+                });
+            }
+        }
+    </script>
+</body>
+</html>

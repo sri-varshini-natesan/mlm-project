@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - MLM System</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg-color: #f4f7fe;
+            --sidebar-bg: #0b1437;
+            --sidebar-hover: #1b2559;
+            --card-bg: #ffffff;
+            --text-main: #1b2559;
+            --text-muted: #8f9bba;
+            
+            /* Chart & Icon Colors */
+            --c-blue: #2563eb;
+            --c-green: #10b981;
+            --c-red: #ef4444;
+            --c-purple: #8b5cf6;
+            --c-orange: #f97316;
+            --c-teal: #14b8a6;
+            --c-pink: #d946ef;
+            --c-light-blue: #3b82f6;
+
+            --border-color: #e2e8f0;
+            --shadow: 0 4px 6px rgba(0, 0, 0, 0.02);
+            --hover-shadow: 0 12px 24px rgba(11, 20, 55, 0.08); /* New deeper shadow for hovers */
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
+        body { background-color: var(--bg-color); color: var(--text-main); display: flex; height: 100vh; overflow: hidden; }
+
+        /* --- SIDEBAR --- */
+        .sidebar { width: 260px; background-color: var(--sidebar-bg); color: white; display: flex; flex-direction: column; flex-shrink: 0; z-index: 100; overflow-y: auto; }
+        .sidebar::-webkit-scrollbar { width: 4px; }
+        .sidebar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+        
+        .sidebar-header { padding: 20px; display: flex; align-items: center; gap: 15px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .sidebar-header img { width: 45px; height: 45px; border-radius: 50%; border: 2px solid white; transition: transform 0.3s ease; }
+        .sidebar-header img:hover { transform: scale(1.1); } /* Profile pic hover */
+        
+        .admin-info h3 { font-size: 14px; font-weight: 700; color: white; }
+        .admin-info p { font-size: 11px; color: var(--c-green); display: flex; align-items: center; gap: 5px; }
+        .admin-info p::before { content: ''; display: block; width: 6px; height: 6px; background: var(--c-green); border-radius: 50%; }
+
+        .sidebar-menu { list-style: none; padding: 10px 0; }
+        .sidebar-menu li a { display: flex; align-items: center; padding: 12px 20px; color: #a3aed1; text-decoration: none; font-size: 13px; font-weight: 500; transition: all 0.3s ease; justify-content: space-between;}
+        .sidebar-menu li a .menu-left { display: flex; align-items: center; }
+        .sidebar-menu li a:hover, .sidebar-menu li a.active { background-color: var(--c-blue); color: white; transform: translateX(5px); } /* Sliding hover effect */
+        .sidebar-menu li a i.menu-icon { width: 20px; margin-right: 10px; font-size: 14px; text-align: center; }
+        .sidebar-menu li a i.chevron { font-size: 10px; opacity: 0.5; transition: transform 0.3s ease; }
+        .sidebar-menu li a:hover i.chevron { transform: translateX(3px); opacity: 1; } /* Chevron pushes right on hover */
+
+        /* --- MAIN CONTENT --- */
+        .main-content { flex: 1; display: flex; flex-direction: column; overflow-y: auto; background-color: #f8f9fa; scroll-behavior: smooth; }
+        
+        .top-header { background-color: var(--card-bg); padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); position: sticky; top: 0; z-index: 50; }
+        .page-title h1 { font-size: 22px; font-weight: 700; color: var(--text-main); transition: color 0.3s; }
+        
+        .header-actions { display: flex; align-items: center; gap: 20px; }
+        .date-picker { padding: 6px 12px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 13px; color: var(--text-main); font-weight: 600; display: flex; align-items: center; gap: 10px; cursor: pointer; transition: all 0.2s ease; }
+        .date-picker:hover { background-color: #f1f5f9; border-color: var(--c-blue); color: var(--c-blue); } /* Date picker hover */
+        
+        .header-actions .icon-btn { color: var(--text-main); font-size: 18px; cursor: pointer; position: relative; transition: all 0.2s ease; }
+        .header-actions .icon-btn:hover { color: var(--c-blue); transform: scale(1.1); } /* Icon bounce hover */
+        
+        .badge { position: absolute; top: -5px; right: -5px; background: var(--c-red); color: white; font-size: 9px; padding: 2px 5px; border-radius: 50%; font-weight: bold; border: 2px solid white; transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .icon-btn:hover .badge { transform: scale(1.2); }
+        
+        .admin-profile { display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 600; cursor: pointer; transition: color 0.2s ease; }
+        .admin-profile:hover { color: var(--c-blue); }
+        .admin-profile img { width: 32px; height: 32px; border-radius: 50%; transition: transform 0.2s; }
+        .admin-profile:hover img { transform: scale(1.1); box-shadow: 0 4px 8px rgba(37, 99, 235, 0.3); }
+
+        .dashboard-container { padding: 20px 30px; }
+
+        /* --- KPI CARDS --- */
+        .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 20px; }
+        
+        .kpi-card { background: var(--card-bg); padding: 15px; border-radius: 12px; box-shadow: var(--shadow); border: 1px solid var(--border-color); display: flex; align-items: center; gap: 15px; cursor: default; transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease; }
+        .kpi-card:hover { transform: translateY(-5px); box-shadow: var(--hover-shadow); } /* 🌟 Floating Hover Effect 🌟 */
+        
+        .kpi-icon { width: 40px; height: 40px; border-radius: 10px; display: flex; justify-content: center; align-items: center; font-size: 18px; flex-shrink: 0; transition: transform 0.3s ease; }
+        .kpi-card:hover .kpi-icon { transform: scale(1.1) rotate(5deg); } /* Icon tilt on hover */
+
+        .kpi-details { flex: 1; }
+        .kpi-details h4 { font-size: 11px; color: var(--text-main); font-weight: 600; margin-bottom: 2px; }
+        .kpi-details h2 { font-size: 17px; color: #000; font-weight: 800; line-height: 1.2; }
+        .kpi-trend { font-size: 10px; font-weight: 700; margin-top: 2px; }
+
+        /* --- CHARTS GRID --- */
+        .charts-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 15px; }
+        
+        .chart-card { background: var(--card-bg); padding: 15px; border-radius: 12px; box-shadow: var(--shadow); border: 1px solid var(--border-color); display: flex; flex-direction: column; transition: transform 0.3s ease, box-shadow 0.3s ease; }
+        .chart-card:hover { transform: translateY(-4px); box-shadow: var(--hover-shadow); } /* 🌟 Floating Hover Effect 🌟 */
+        
+        .chart-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .chart-title { font-size: 13px; font-weight: 700; color: var(--text-main); margin-bottom: 20px; }
+        .chart-header .chart-title { margin-bottom: 0; } 
+        
+        .chart-body { flex: 1; position: relative; min-height: 180px; display: flex; justify-content: center; align-items: center; }
+
+        /* Custom Legends for Doughnuts */
+        .doughnut-container { display: flex; flex-direction: column; align-items: center; justify-content: space-between; width: 100%; height: 100%; gap: 15px; }
+        .doughnut-wrapper { width: 100%; height: 140px; position: relative; display: flex; justify-content: center; transition: transform 0.3s ease; }
+        .chart-card:hover .doughnut-wrapper { transform: scale(1.05); } /* Subtle zoom on chart hover */
+        
+        .custom-legend { width: 100%; display: flex; flex-direction: row; justify-content: center; flex-wrap: wrap; gap: 15px; margin-top: auto; }
+        .legend-item { display: flex; align-items: center; font-size: 11px; font-weight: 600; color: var(--text-main); transition: color 0.2s; cursor: pointer; }
+        .legend-item:hover { color: var(--c-blue); }
+        .legend-color { width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; }
+
+        /* --- Top Earners List Interactions --- */
+        .earner-list { display: flex; flex-direction: column; gap: 5px; width: 100%; }
+        
+        .earner-item { display: flex; align-items: center; justify-content: space-between; padding: 8px; border-radius: 8px; transition: all 0.2s ease; cursor: default; }
+        .earner-item:hover { background-color: #f1f5f9; transform: translateX(6px); box-shadow: 0 2px 4px rgba(0,0,0,0.02); } /* 🌟 Highlight & Slide Right Hover 🌟 */
+        
+        .earner-left { display: flex; align-items: center; gap: 12px; }
+        .earner-rank { font-size: 13px; font-weight: 800; color: var(--text-main); width: 15px; transition: color 0.2s; }
+        .earner-item:hover .earner-rank { color: var(--c-blue); } /* Rank turns blue on hover */
+        
+        .earner-avatar { width: 28px; height: 28px; border-radius: 50%; object-fit: cover; transition: transform 0.3s ease; border: 2px solid transparent; }
+        .earner-item:hover .earner-avatar { transform: scale(1.15); border-color: var(--c-blue); } /* Avatar zoom and border */
+        
+        .earner-name { font-size: 12px; font-weight: 600; color: var(--text-main); }
+        .earner-amount { font-size: 12px; font-weight: 700; color: #000; transition: color 0.2s; }
+        .earner-item:hover .earner-amount { color: var(--c-green); } /* Money turns green on hover */
+        
+        .star-icon { color: #facc15; font-size: 14px; transition: transform 0.3s ease; }
+        .chart-card:hover .star-icon { transform: rotate(72deg) scale(1.2); } /* Spinning star! */
+
+        /* Specific Colors */
+        .t-green { color: var(--c-green); }
+        .t-red { color: var(--c-red); }
+        .t-blue { color: var(--c-blue); }
+
+        @media (max-width: 900px) { 
+            .kpi-grid { grid-template-columns: repeat(2, 1fr); } 
+            .charts-grid { grid-template-columns: 1fr; } 
+        }
+    </style>
+</head>
+<body>
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <img src="https://i.pravatar.cc/150?img=47" alt="Admin">
+            <div class="admin-info">
+                <h3>Super Admin</h3>
+                <p>Online</p>
+            </div>
+        </div>
+        <ul class="sidebar-menu">
+            <li><a href="/admin/dashboard" class="active"><div class="menu-left"><i class="fas fa-home menu-icon"></i> Dashboard</div></a></li>
+            <li><a href="/admin/users"><div class="menu-left"><i class="fas fa-user-friends menu-icon"></i> User Management</div> <i class="fas fa-chevron-right chevron"></i></a></li>
+            <li><a href="#"><div class="menu-left"><i class="fas fa-graduation-cap menu-icon"></i> Course Management</div> <i class="fas fa-chevron-right chevron"></i></a></li>
+            <li><a href="#"><div class="menu-left"><i class="fas fa-chart-pie menu-icon"></i> ROI Management</div> <i class="fas fa-chevron-right chevron"></i></a></li>
+            <li><a href="#"><div class="menu-left"><i class="fas fa-sitemap menu-icon"></i> Binary Management</div> <i class="fas fa-chevron-right chevron"></i></a></li>
+            <li><a href="#"><div class="menu-left"><i class="fas fa-user-plus menu-icon"></i> Direct Bonus</div> <i class="fas fa-chevron-right chevron"></i></a></li>
+            <li><a href="#"><div class="menu-left"><i class="fas fa-sync menu-icon"></i> Repurchase Bonus</div> <i class="fas fa-chevron-right chevron"></i></a></li>
+            <li><a href="#"><div class="menu-left"><i class="fas fa-crown menu-icon"></i> Royalty Management</div> <i class="fas fa-chevron-right chevron"></i></a></li>
+            <li><a href="#"><div class="menu-left"><i class="fas fa-wallet menu-icon"></i> Wallet Management</div> <i class="fas fa-chevron-right chevron"></i></a></li>
+            <li><a href="#"><div class="menu-left"><i class="fas fa-money-check-alt menu-icon"></i> Withdrawal Management</div> <i class="fas fa-chevron-right chevron"></i></a></li>
+            <li><a href="#"><div class="menu-left"><i class="fas fa-chart-bar menu-icon"></i> Income Reports</div> <i class="fas fa-chevron-right chevron"></i></a></li>
+            <li><a href="#"><div class="menu-left"><i class="fas fa-network-wired menu-icon"></i> Tree Management</div> <i class="fas fa-chevron-right chevron"></i></a></li>
+            <li><a href="#"><div class="menu-left"><i class="fas fa-id-card menu-icon"></i> KYC Management</div> <i class="fas fa-chevron-right chevron"></i></a></li>
+            <li><a href="#"><div class="menu-left"><i class="fas fa-bell menu-icon"></i> Notification</div></a></li>
+            <li><a href="#"><div class="menu-left"><i class="fas fa-headset menu-icon"></i> Support Tickets</div> <i class="fas fa-chevron-right chevron"></i></a></li>
+            <li><a href="#"><div class="menu-left"><i class="fas fa-calendar-alt menu-icon"></i> Holiday Management</div> <i class="fas fa-chevron-right chevron"></i></a></li>
+            <li><a href="#"><div class="menu-left"><i class="fas fa-cogs menu-icon"></i> System Settings</div> <i class="fas fa-chevron-right chevron"></i></a></li>
+            <li><a href="#"><div class="menu-left"><i class="fas fa-clock menu-icon"></i> Cron Job Management</div> <i class="fas fa-chevron-right chevron"></i></a></li>
+            <li><a href="#"><div class="menu-left"><i class="fas fa-file-alt menu-icon"></i> Audit & Logs</div> <i class="fas fa-chevron-right chevron"></i></a></li>
+            <li><a href="#"><div class="menu-left"><i class="fas fa-user-shield menu-icon"></i> Admin Management</div> <i class="fas fa-chevron-right chevron"></i></a></li>
+            <li><a href="/logout"><div class="menu-left"><i class="fas fa-sign-out-alt menu-icon"></i> Logout</div></a></li>
+        </ul>
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <main class="main-content">
+        <header class="top-header">
+            <div class="page-title">
+                <h1>Dashboard</h1>
+            </div>
+            <div class="header-actions">
+                <div class="date-picker">20 May 2024 <i class="fas fa-chevron-down" style="font-size: 10px;"></i></div>
+                <div class="icon-btn"><i class="fas fa-search"></i></div>
+                <div class="icon-btn"><i class="far fa-bell"></i><span class="badge">5</span></div>
+                <div class="admin-profile">
+                    <img src="https://i.pravatar.cc/150?img=47" alt="Admin"> Admin <i class="fas fa-chevron-down" style="font-size: 10px;"></i>
+                </div>
+            </div>
+        </header>
+
+        <div class="dashboard-container">
+            
+            <!-- ALL 12 KPI CARDS IN ONE 4-COLUMN GRID -->
+            <div class="kpi-grid">
+                
+                <!-- Row 1 -->
+                <div class="kpi-card" style="border-color: rgba(37, 99, 235, 0.2);">
+                    <div class="kpi-icon" style="background: rgba(37, 99, 235, 0.1); color: var(--c-blue);"><i class="fas fa-user"></i></div>
+                    <div class="kpi-details">
+                        <h4>Total Users</h4>
+                        <h2>25,430</h2>
+                        <div class="kpi-trend t-green">+12.5%</div>
+                    </div>
+                </div>
+                <div class="kpi-card" style="border-color: rgba(16, 185, 129, 0.2);">
+                    <div class="kpi-icon" style="background: rgba(16, 185, 129, 0.1); color: var(--c-green);"><i class="fas fa-user-check"></i></div>
+                    <div class="kpi-details">
+                        <h4>Active Users</h4>
+                        <h2>18,760</h2>
+                        <div class="kpi-trend t-green">+10.2%</div>
+                    </div>
+                </div>
+                <div class="kpi-card" style="border-color: rgba(217, 70, 239, 0.2);">
+                    <div class="kpi-icon" style="background: rgba(217, 70, 239, 0.1); color: var(--c-pink);"><i class="fas fa-user-times"></i></div>
+                    <div class="kpi-details">
+                        <h4>Inactive Users</h4>
+                        <h2>6,670</h2>
+                        <div class="kpi-trend t-red">-2.1%</div>
+                    </div>
+                </div>
+                <div class="kpi-card" style="border-color: rgba(139, 92, 246, 0.2);">
+                    <div class="kpi-icon" style="background: rgba(139, 92, 246, 0.1); color: var(--c-purple);"><i class="fas fa-user-plus"></i></div>
+                    <div class="kpi-details">
+                        <h4>Today Joining</h4>
+                        <h2>312</h2>
+                        <div class="kpi-trend t-green">+18.3%</div>
+                    </div>
+                </div>
+
+                <!-- Row 2 -->
+                <div class="kpi-card" style="border-color: rgba(59, 130, 246, 0.2);">
+                    <div class="kpi-icon" style="background: rgba(59, 130, 246, 0.1); color: var(--c-light-blue);"><i class="fas fa-file-invoice"></i></div>
+                    <div class="kpi-details">
+                        <h4>Total Sales</h4>
+                        <h2>₹ 12,45,680</h2>
+                        <div class="kpi-trend t-green">+15.6%</div>
+                    </div>
+                </div>
+                <div class="kpi-card" style="border-color: rgba(20, 184, 166, 0.2);">
+                    <div class="kpi-icon" style="background: rgba(20, 184, 166, 0.1); color: var(--c-teal);"><i class="fas fa-chart-line"></i></div>
+                    <div class="kpi-details">
+                        <h4>Today Sales</h4>
+                        <h2>₹ 1,25,450</h2>
+                        <div class="kpi-trend t-green">+11.7%</div>
+                    </div>
+                </div>
+                <div class="kpi-card" style="border-color: rgba(249, 115, 22, 0.2);">
+                    <div class="kpi-icon" style="background: rgba(249, 115, 22, 0.1); color: var(--c-orange);"><i class="fas fa-wallet"></i></div>
+                    <div class="kpi-details">
+                        <h4>Total Withdrawn</h4>
+                        <h2>₹ 8,56,210</h2>
+                    </div>
+                </div>
+                <div class="kpi-card" style="border-color: rgba(249, 115, 22, 0.2);">
+                    <div class="kpi-icon" style="background: rgba(249, 115, 22, 0.1); color: var(--c-orange);"><i class="fas fa-users"></i></div>
+                    <div class="kpi-details">
+                        <h4>Pending Withdraw</h4>
+                        <h2>₹ 1,25,600</h2>
+                    </div>
+                </div>
+
+                <!-- Row 3 -->
+                <div class="kpi-card" style="border-color: rgba(217, 70, 239, 0.2);">
+                    <div class="kpi-icon" style="background: rgba(217, 70, 239, 0.1); color: var(--c-pink);"><i class="fas fa-chart-bar"></i></div>
+                    <div class="kpi-details">
+                        <h4>Total Income Dist.</h4>
+                        <h2>₹ 15,68,950</h2>
+                    </div>
+                </div>
+                <div class="kpi-card" style="border-color: rgba(37, 99, 235, 0.2);">
+                    <div class="kpi-icon" style="background: rgba(37, 99, 235, 0.1); color: var(--c-blue);"><i class="fas fa-wallet"></i></div>
+                    <div class="kpi-details">
+                        <h4>Today ROI Dist.</h4>
+                        <h2>₹ 2,45,300</h2>
+                    </div>
+                </div>
+                <div class="kpi-card" style="border-color: rgba(139, 92, 246, 0.2);">
+                    <div class="kpi-icon" style="background: rgba(139, 92, 246, 0.1); color: var(--c-purple);"><i class="fas fa-network-wired"></i></div>
+                    <div class="kpi-details">
+                        <h4>Binary Income Dist.</h4>
+                        <h2>₹ 3,25,450</h2>
+                    </div>
+                </div>
+                <div class="kpi-card" style="border-color: rgba(59, 130, 246, 0.2);">
+                    <div class="kpi-icon" style="background: rgba(59, 130, 246, 0.1); color: var(--c-light-blue);"><i class="fas fa-rupee-sign"></i></div>
+                    <div class="kpi-details">
+                        <h4>Company Turnover</h4>
+                        <h2>₹ 28,75,630</h2>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ROW 4: FIRST 3 CHARTS -->
+            <div class="charts-grid">
+                <div class="chart-card">
+                    <div class="chart-title">Daily Joining Graph</div>
+                    <div class="chart-body"><canvas id="joinChart"></canvas></div>
+                </div>
+                <div class="chart-card">
+                    <div class="chart-title">Income Distribution (Daily)</div>
+                    <div class="chart-body"><canvas id="incomeChart"></canvas></div>
+                </div>
+                <div class="chart-card">
+                    <div class="chart-title">Course Purchase Statistics</div>
+                    <div class="chart-body">
+                        <div class="doughnut-container">
+                            <div class="doughnut-wrapper"><canvas id="courseChart"></canvas></div>
+                            <div class="custom-legend">
+                                <div class="legend-item"><div class="legend-color" style="background: var(--c-blue);"></div> Basic - 35%</div>
+                                <div class="legend-item"><div class="legend-color" style="background: var(--c-green);"></div> Master - 40%</div>
+                                <div class="legend-item"><div class="legend-color" style="background: var(--c-orange);"></div> Advanced - 25%</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ROW 5: NEXT 3 CHARTS/LISTS -->
+            <div class="charts-grid">
+                <div class="chart-card">
+                    <div class="chart-title">Active vs Inactive Users</div>
+                    <div class="chart-body">
+                        <div class="doughnut-container">
+                            <div class="doughnut-wrapper"><canvas id="activeChart"></canvas></div>
+                            <div class="custom-legend">
+                                <div class="legend-item"><div class="legend-color" style="background: var(--c-green);"></div> Active: <b>18,760</b></div>
+                                <div class="legend-item"><div class="legend-color" style="background: var(--c-red);"></div> Inactive: <b>6,670</b></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <div class="chart-title">Top Earners</div>
+                        <i class="fas fa-star star-icon"></i>
+                    </div>
+                    <div class="chart-body" style="align-items: flex-start;">
+                        <div class="earner-list">
+                            <div class="earner-item">
+                                <div class="earner-left">
+                                    <span class="earner-rank">1</span>
+                                    <img src="https://i.pravatar.cc/150?img=11" class="earner-avatar">
+                                    <span class="earner-name">Ravi Kumar</span>
+                                </div>
+                                <span class="earner-amount">₹ 2,45,680</span>
+                            </div>
+                            <div class="earner-item">
+                                <div class="earner-left">
+                                    <span class="earner-rank">2</span>
+                                    <img src="https://i.pravatar.cc/150?img=12" class="earner-avatar">
+                                    <span class="earner-name">Suresh Babu</span>
+                                </div>
+                                <span class="earner-amount">₹ 1,85,420</span>
+                            </div>
+                            <div class="earner-item">
+                                <div class="earner-left">
+                                    <span class="earner-rank">3</span>
+                                    <img src="https://i.pravatar.cc/150?img=13" class="earner-avatar">
+                                    <span class="earner-name">Arun Prakash</span>
+                                </div>
+                                <span class="earner-amount">₹ 1,45,230</span>
+                            </div>
+                            <div class="earner-item">
+                                <div class="earner-left">
+                                    <span class="earner-rank">4</span>
+                                    <img src="https://i.pravatar.cc/150?img=5" class="earner-avatar">
+                                    <span class="earner-name">Priya Sharma</span>
+                                </div>
+                                <span class="earner-amount">₹ 1,25,690</span>
+                            </div>
+                            <div class="earner-item">
+                                <div class="earner-left">
+                                    <span class="earner-rank">5</span>
+                                    <img src="https://i.pravatar.cc/150?img=15" class="earner-avatar">
+                                    <span class="earner-name">Karthik Raja</span>
+                                </div>
+                                <span class="earner-amount">₹ 1,05,320</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="chart-card">
+                    <div class="chart-title">Withdrawal Trends</div>
+                    <div class="chart-body"><canvas id="withdrawChart"></canvas></div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <script>
+        const commonOptions = {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { display: false }, tooltip: { backgroundColor: '#1b2559', titleFont: { size: 13 }, bodyFont: { size: 13 }, padding: 10, cornerRadius: 8, displayColors: false } },
+            scales: { x: { grid: { display: false } }, y: { beginAtZero: true, grid: { color: '#f1f5f9' }, ticks: { font: {size: 10} } } },
+            animation: { duration: 2000, easing: 'easeOutQuart' } // Smooth initial load animation
+        };
+        const labels = ['14 May', '15 May', '16 May', '17 May', '18 May', '19 May', '20 May'];
+
+        // 1. Daily Joining Graph (Blue Line)
+        new Chart(document.getElementById('joinChart'), {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{ data: [200, 400, 180, 300, 400, 200, 430], borderColor: '#2563eb', borderWidth: 3, pointBackgroundColor: '#ffffff', pointBorderColor: '#2563eb', pointBorderWidth: 2, pointRadius: 4, pointHoverRadius: 6, tension: 0.3 }]
+            },
+            options: { ...commonOptions, scales: { ...commonOptions.scales, y: { max: 500 } }, interaction: { mode: 'index', intersect: false } }
+        });
+
+        // 2. Income Distribution (Green Area Line)
+        new Chart(document.getElementById('incomeChart'), {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{ data: [1.8, 3.8, 3.2, 1.7, 2.6, 1.8, 4.0], borderColor: '#10b981', backgroundColor: 'rgba(16, 185, 129, 0.15)', borderWidth: 3, pointBackgroundColor: '#ffffff', pointBorderColor: '#10b981', pointBorderWidth: 2, pointRadius: 4, pointHoverRadius: 6, fill: true, tension: 0.3 }]
+            },
+            options: { ...commonOptions, scales: { ...commonOptions.scales, y: { max: 5, ticks: { callback: function(val) { return val + 'L'; } } } }, interaction: { mode: 'index', intersect: false } }
+        });
+
+        // 3. Course Purchase Statistics (Doughnut)
+        new Chart(document.getElementById('courseChart'), {
+            type: 'doughnut',
+            data: { labels: ['Basic', 'Master', 'Advanced'], datasets: [{ data: [35, 40, 25], backgroundColor: ['#2563eb', '#10b981', '#f97316'], borderWidth: 2, borderColor: '#ffffff', hoverOffset: 8 }] },
+            options: { responsive: true, maintainAspectRatio: false, cutout: '70%', plugins: { legend: { display: false } }, animation: { animateScale: true, animateRotate: true } }
+        });
+
+        // 4. Active vs Inactive Users (Doughnut)
+        new Chart(document.getElementById('activeChart'), {
+            type: 'doughnut',
+            data: { labels: ['Active', 'Inactive'], datasets: [{ data: [73.7, 26.3], backgroundColor: ['#10b981', '#ef4444'], borderWidth: 2, borderColor: '#ffffff', hoverOffset: 8 }] },
+            options: { responsive: true, maintainAspectRatio: false, cutout: '70%', plugins: { legend: { display: false } }, animation: { animateScale: true, animateRotate: true } }
+        });
+
+        // 5. Withdrawal Trends (Purple Bar Chart)
+        new Chart(document.getElementById('withdrawChart'), {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{ data: [1.2, 2.3, 2.6, 2.3, 1.5, 2.0, 0], backgroundColor: '#a855f7', hoverBackgroundColor: '#8b5cf6', borderRadius: 4, barThickness: 16 }]
+            },
+            options: { ...commonOptions, scales: { ...commonOptions.scales, y: { max: 3, ticks: { callback: function(val) { return val + 'L'; } } } } }
+        });
+    </script>
+</body>
+</html>
