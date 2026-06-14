@@ -508,12 +508,15 @@
         }
 
         function executeBackendPurchase() {
+            // 1. Grab the ID from the HTML card (defaults to 1 if your HTML doesn't have a data-id yet)
+            const cid = currentPurchaseData.card.getAttribute('data-id') || 
+                        currentPurchaseData.card.getAttribute('data-course-id') || 1;
+
             fetch('/api/courses/purchase', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    course_name: currentPurchaseData.name,
-                    course_price: currentPurchaseData.price
+                    course_id: parseInt(cid) // 🌟 THIS IS EXACTLY WHAT PYTHON WANTS! 🌟
                 })
             })
             .then(res => res.json())
@@ -538,7 +541,6 @@
                         launchVideoPlayer(currentPurchaseData.name);
                     }, 1500);
 
-                    // Clear tracking button so closeAllModals doesn't revert it
                     currentPurchaseData.button = null; 
 
                 } else {
