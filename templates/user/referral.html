@@ -98,13 +98,13 @@
                     
                     <div class="ref-box">
                         <div class="ref-label"><i class="fas fa-arrow-left" style="color:var(--color-green)"></i> Left Team Link</div>
-                        <div class="ref-link" id="leftLink">https://yourplatform.com/register/U100001?side=left</div>
+                        <div class="ref-link" id="leftLink">{{ request.host_url }}signup/{{ user_code }}?side=left</div>
                         <button class="btn-copy" onclick="copyText('leftLink')">Copy Left Link</button>
                     </div>
 
                     <div class="ref-box">
                         <div class="ref-label"><i class="fas fa-arrow-right" style="color:var(--color-orange)"></i> Right Team Link</div>
-                        <div class="ref-link" id="rightLink">https://yourplatform.com/register/U100001?side=right</div>
+                        <div class="ref-link" id="rightLink">{{ request.host_url }}signup/{{ user_code }}?side=right</div>
                         <button class="btn-copy" onclick="copyText('rightLink')">Copy Right Link</button>
                     </div>
 
@@ -134,20 +134,7 @@
                     }
                 });
             }
-
-            fetch('/api/user/info')
-                .then(res => res.json())
-                .then(data => {
-                    if (data.status === 'success') {
-                        const code = data.user_code;
-                        const leftLink = `${window.location.origin}/signup?ref=${code}&leg=left`;
-                        const rightLink = `${window.location.origin}/signup?ref=${code}&leg=right`;
-                        
-                        document.getElementById('leftLink').innerText = leftLink;
-                        document.getElementById('rightLink').innerText = rightLink;
-                    }
-                })
-                .catch(err => console.error("Error loading user info:", err));
+            // THE FETCH API CALL HAS BEEN DELETED!
         });
 
         function copyText(id) {
