@@ -73,12 +73,12 @@
         </div>
 
         <div class="form-group">
-            <label>Referral Id</label>
-            <div class="ref-selection">
-                <label class="radio-option"><input type="radio" name="ref" value="yes" checked onchange="toggleRef(true)"> Referral Id</label>
-                <label class="radio-option"><input type="radio" name="ref" value="no" onchange="toggleRef(false)"> No Referral Id</label>
-            </div>
-            <input type="text" id="refInput" placeholder="Enter Referral ID (Optional)">
+        <label>Referral Id</label>
+        <div class="ref-selection">
+            <label class="radio-option"><input type="radio" name="ref" value="yes" onchange="toggleRef(true)" checked> Referral Id</label>
+            <label class="radio-option"><input type="radio" name="ref" value="no" onchange="toggleRef(false)"> No Referral Id</label>
+        </div>
+            <input type="text" id="refInput" placeholder="Enter Referral ID (Optional)" value="{{ ref_code }}">
         </div>
 
         <div class="form-group">
