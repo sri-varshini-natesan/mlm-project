@@ -138,6 +138,7 @@ The Admin Team"""
     except Exception as e:
         print(f"Error: Failed to send email to {to_email}. Reason: {e}")
 
+
 def send_welcome_sms(mobile, user_code):
     url = "https://www.fast2sms.com/dev/bulkV2"
     api_key = "YOUR_FAST2SMS_API_KEY" 
@@ -159,61 +160,6 @@ def find_user_by_user_code(user_code):
     try:
         cursor.execute("SELECT * FROM users WHERE user_code = %s", (user_code,))
         return cursor.fetchone()
-    finally:
-        cursor.close()
-        db.close()
-
-def register_new_user(full_name, email, dob, gender, aadhar_no, pan_no, mobile, password, sponsor_id, leg):
-    db = get_db_connection()
-    if not db: return {"status": "error", "message": "Database error"}
-    
-    cursor = db.cursor(dictionary=True)
-    try:
-        cursor.execute("SELECT id FROM users WHERE email = %s", (email,))
-        if cursor.fetchone(): return {"status": "error", "message": "Email is already registered!"}
-        
-        real_sponsor_id = None
-        if sponsor_id:
-            cursor.execute("SELECT id FROM users WHERE user_code = %s", (sponsor_id,))
-            sponsor_record = cursor.fetchone()
-            if sponsor_record: real_sponsor_id = sponsor_record['id']
-            else: return {"status": "error", "message": "Invalid Sponsor ID!"}
-        
-        user_code = f"MLM{random.randint(10000, 99999)}"
-        
-        # --- 🌟 THE SPILLOVER ENGINE 🌟 ---
-        leg = str(leg).lower().strip()
-        if leg not in ['left', 'right']: leg = 'left' # Fallback
-        
-        placement_id = real_sponsor_id
-        
-        # This loop finds the absolute bottom of the specified leg
-        if placement_id:
-            while True:
-                cursor.execute("SELECT id FROM users WHERE placement_id = %s AND leg = %s", (placement_id, leg))
-                child = cursor.fetchone()
-                if child:
-                    placement_id = child['id']
-                else:
-                    break 
-        
-        cursor.execute("""
-            INSERT INTO users (full_name, email, user_code, dob, gender, aadhar_no, pan_no, mobile, password, sponsor_id, placement_id, leg) 
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-        """, (full_name, email, user_code, dob, gender, aadhar_no, pan_no, mobile, password, real_sponsor_id, placement_id, leg))
-        
-        db.commit() 
-        # Optional: threading.Thread(target=send_welcome_email, ...).start()
-        
-        return {"status": "success", "message": f"Registration successful!\nYour Login ID is: {user_code}"}
-        
-    except mysql.connector.IntegrityError as e:
-        db.rollback()
-        return {"status": "error", "message": "Account details already exist."}
-    except Exception as e:
-        db.rollback()
-        print("Registration Error:", e)
-        return {"status": "error", "message": "Registration error."}
     finally:
         cursor.close()
         db.close()
@@ -395,6 +341,36 @@ def get_tree_view_data(user_code):
         cursor.close()
         db.close()
 
+def process_withdrawal_request(user_id, request_amount):
+    db = get_db_connection()
+    if not db: return {"status": "error", "message": "Database error"}
+    cursor = db.cursor(dictionary=True)
+    try:
+        request_amount = float(request_amount)
+        if request_amount < 100: return {"status": "error", "message": "Minimum withdrawal amount is ₹100."}
+            
+        stats = get_financial_stats(user_id)
+        if request_amount > float(stats['current_balance']):
+            return {"status": "error", "message": f"Insufficient funds. Balance: ₹{stats['current_balance']}."}
+            
+        tds_amount = request_amount * 0.05
+        admin_amount = request_amount * 0.05
+        total_deductions = tds_amount + admin_amount
+        net_payable = request_amount - total_deductions
+        
+        cursor.execute("""
+            INSERT INTO withdrawals (user_id, request_amount, tds_deduction, net_payable, status)
+            VALUES (%s, %s, %s, %s, 'PENDING')
+        """, (user_id, request_amount, total_deductions, net_payable))
+        db.commit()
+        return {"status": "success", "message": f"Withdrawal requested. Net payout: ₹{net_payable}."}
+    except Exception as e:
+        db.rollback()
+        return {"status": "error", "message": str(e)}
+    finally:
+        cursor.close()
+        db.close()
+
 def process_course_purchase(user_id, course_id):
     db = get_db_connection()
     if not db: return {"status": "error", "message": "Database error"}
@@ -441,7 +417,7 @@ def process_course_purchase(user_id, course_id):
                 VALUES (%s, %s, 'CREDIT', 'DIRECT_SPONSOR', %s)
             """, (user['sponsor_id'], sponsor_bonus, f"Direct Referral Bonus for {course_name}"))
 
-        # 3. BINARY VOLUME ROLL-UP ENGINE 
+        # 3. BINARY VOLUME ROLL-UP ENGINE (Removed redundant left_carry/right_carry)
         current_upline_id = user['sponsor_id']
         current_leg = user['leg']
         
@@ -471,32 +447,59 @@ def process_course_purchase(user_id, course_id):
         cursor.close()
         db.close()
 
-def process_withdrawal_request(user_id, request_amount):
+def register_new_user(full_name, email, dob, gender, aadhar_no, pan_no, mobile, password, sponsor_id, leg):
     db = get_db_connection()
     if not db: return {"status": "error", "message": "Database error"}
+    
     cursor = db.cursor(dictionary=True)
     try:
-        request_amount = float(request_amount)
-        if request_amount < 100: return {"status": "error", "message": "Minimum withdrawal amount is ₹100."}
-            
-        stats = get_financial_stats(user_id)
-        if request_amount > float(stats['current_balance']):
-            return {"status": "error", "message": f"Insufficient funds. Balance: ₹{stats['current_balance']}."}
-            
-        tds_amount = request_amount * 0.05
-        admin_amount = request_amount * 0.05
-        total_deductions = tds_amount + admin_amount
-        net_payable = request_amount - total_deductions
+        cursor.execute("SELECT id FROM users WHERE email = %s", (email,))
+        if cursor.fetchone(): return {"status": "error", "message": "Email is already registered!"}
+        
+        real_sponsor_id = None
+        if sponsor_id:
+            cursor.execute("SELECT id FROM users WHERE user_code = %s", (sponsor_id,))
+            sponsor_record = cursor.fetchone()
+            if sponsor_record: real_sponsor_id = sponsor_record['id']
+            else: return {"status": "error", "message": "Invalid Sponsor ID!"}
+        
+        user_code = f"MLM{random.randint(10000, 99999)}"
+        
+        # --- 🌟 THE SPILLOVER ENGINE 🌟 ---
+        leg = str(leg).lower().strip()
+        if leg not in ['left', 'right']: leg = 'left' # Fallback
+        
+        placement_id = real_sponsor_id
+        
+        # This loop finds the absolute bottom of the specified leg
+        if placement_id:
+            while True:
+                # Look for someone already in this slot
+                cursor.execute("SELECT id FROM users WHERE placement_id = %s AND leg = %s", (placement_id, leg))
+                child = cursor.fetchone()
+                if child:
+                    # Slot taken, move down to that child and repeat
+                    placement_id = child['id']
+                else:
+                    # Found an empty slot at the bottom!
+                    break 
         
         cursor.execute("""
-            INSERT INTO withdrawals (user_id, request_amount, tds_deduction, net_payable, status)
-            VALUES (%s, %s, %s, %s, 'PENDING')
-        """, (user_id, request_amount, total_deductions, net_payable))
-        db.commit()
-        return {"status": "success", "message": f"Withdrawal requested. Net payout: ₹{net_payable}."}
+            INSERT INTO users (full_name, email, user_code, dob, gender, aadhar_no, pan_no, mobile, password, sponsor_id, placement_id, leg) 
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        """, (full_name, email, user_code, dob, gender, aadhar_no, pan_no, mobile, password, real_sponsor_id, placement_id, leg))
+        
+        db.commit() 
+        # Optional: threading.Thread(target=send_welcome_email, ...).start()
+        
+        return {"status": "success", "message": f"Registration successful!\nYour Login ID is: {user_code}"}
+        
+    except mysql.connector.IntegrityError as e:
+        db.rollback()
+        return {"status": "error", "message": "Account details already exist."}
     except Exception as e:
         db.rollback()
-        return {"status": "error", "message": str(e)}
+        return {"status": "error", "message": "Registration error."}
     finally:
         cursor.close()
         db.close()
@@ -506,9 +509,12 @@ def verify_login(user_code, password):
     if not db: return None
     cursor = db.cursor(dictionary=True)
     try:
+        # DOWNGRADED: Checking the raw password directly in the SQL query
         cursor.execute("SELECT id, full_name as name, user_code, is_active FROM users WHERE user_code = %s AND password = %s", (user_code, password))
         user = cursor.fetchone()
-        if user: return user
+        
+        if user:
+            return user
         return None
     except Exception as e:
         print("Login Error:", e)
