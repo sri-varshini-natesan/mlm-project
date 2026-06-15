@@ -9,16 +9,18 @@ from email.mime.multipart import MIMEMultipart
 import threading
 import requests
 from werkzeug.security import generate_password_hash, check_password_hash
+import os
 
 try:
     db_pool = mysql.connector.pooling.MySQLConnectionPool(
         pool_name="mlm_pool",
         pool_size=32,
         pool_reset_session=True,
-        host='localhost',
-        database='mlm_database',
-        user='root',
-        password='' 
+        host=os.getenv('DB_HOST'),      # Matches your Render key
+        database=os.getenv('DB_NAME'),  # Matches your Render key
+        user=os.getenv('DB_USER'),      # Matches your Render key
+        password=os.getenv('DB_PASSWORD'), # Matches your Render key
+        port=int(os.getenv('DB_PORT', 3306)) # Matches your Render key
     )
     print("Database Connection Pool initialized successfully.")
 except Error as e:
