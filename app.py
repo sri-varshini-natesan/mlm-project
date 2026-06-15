@@ -4,7 +4,7 @@ from db_config import (
     process_course_purchase, process_withdrawal_request,
     register_new_user, verify_login, get_user_profile, 
     update_user_profile, get_bank_details, update_bank_details, get_withdrawal_history,
-    get_all_users_for_admin, get_db_connection, calculate_daily_incomes # ADDED THIS IMPORT
+    get_all_users_for_admin, get_db_connection, calculate_daily_incomes
 )
 import datetime
 import os
@@ -14,14 +14,18 @@ import io
 
 # --- NOTIFICATIONS ---
 from apscheduler.schedulers.background import BackgroundScheduler
-import notification
+# Assuming notification module exists locally
+try:
+    import notification
+except ImportError:
+    pass
 
 app = Flask(__name__)
 app.secret_key = 'mlm_super_secure_key_2026_fixed_xyz987'
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
-app.config['SESSION_COOKIE_SECURE'] = False  # False because using HTTP not HTTPS
-app.config['PERMANENT_SESSION_LIFETIME'] = 86400  # 24 hours
+app.config['SESSION_COOKIE_SECURE'] = False  
+app.config['PERMANENT_SESSION_LIFETIME'] = 86400  
 
 UPLOAD_FOLDER = 'static/uploads/kyc'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
@@ -41,7 +45,10 @@ def require_admin_for_admin_routes():
 # ==========================================
 def run_midnight_job():
     print("Running midnight notifications...")
-    notification.run_midnight_job()
+    try:
+        notification.run_midnight_job()
+    except Exception as e:
+        print("Notification skip:", e)
 
 scheduler = BackgroundScheduler()
 scheduler.add_job(run_midnight_job, 'cron', hour=0, minute=1)
@@ -51,7 +58,6 @@ scheduler.add_job(run_midnight_job, 'cron', hour=0, minute=1)
 # ==========================================
 @app.context_processor
 def inject_user_data():
-    """Automatically sends these variables to EVERY HTML file"""
     user_name = session.get('user_name')
     img = session.get('profile_img')
     
@@ -76,11 +82,9 @@ def home():
     if 'user_id' not in session: return redirect(url_for('login_page'))
     user_code = session.get('user_code')
     
-    # Generate the Gold Standard Smart Links
     left_link = f"{request.host_url}signup/{user_code}?side=left"
     right_link = f"{request.host_url}signup/{user_code}?side=right"
     
-    # Pass both links to the dashboard template
     return render_template('user/index.html', left_link=left_link, right_link=right_link)
 
 @app.route('/profile')
@@ -128,14 +132,10 @@ def login_page():
 @app.route('/signup', defaults={'sponsor_code': ''})
 @app.route('/signup/<sponsor_code>')
 def signup_page(sponsor_code):
-    # 1. Fallback just in case someone uses the old ?ref= format
     if not sponsor_code:
         sponsor_code = request.args.get('ref', '')
         
-    # 2. Capture the 'side' from the URL (e.g., ?side=left)
     leg_side = request.args.get('side', '').lower()
-    
-    # 3. Pass both the sponsor code AND the leg side to the HTML form
     return render_template('user/signup.html', ref_code=sponsor_code, leg_side=leg_side)
 
 @app.route('/logout')
@@ -210,24 +210,19 @@ def api_signup():
     leg = data.get('leg')
     result = register_new_user(full_name, email, dob, gender, aadhar_no, pan_no, mobile, password, sponsor_id, leg)
     return jsonify(result)
+
 @app.route('/api/courses/purchase', methods=['POST'])
 def api_purchase_course():
-    # 1. Security check: Is the user logged in?
     if 'user_id' not in session: 
         return jsonify({"status": "error", "message": "Unauthorized"}), 401
     
-    # 2. Get the data from the frontend
     data = request.get_json()
-    
-    # IMPORTANT: Check what your frontend JS is sending. It might be 'course_id' or 'courseId'
     course_id = data.get('course_id') 
     
     if not course_id:
         return jsonify({"status": "error", "message": "Course ID is missing."})
         
-    # 3. Send to the database engine
     try:
-        # Call the new function you just put in db_config.py
         result = process_course_purchase(session['user_id'], course_id)
         return jsonify(result)
     except Exception as e:
@@ -243,43 +238,6 @@ def api_admin_tree_data(user_code):
         return jsonify(tree_data)
     else:
         return jsonify({"status": "error", "message": "User Code not found in database!"})
-
-def get_user_node_data(user_code):
-    conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
-    
-    # 1. Fetch the user with their Course and Join Date
-    query = """
-        SELECT 
-            u.id, 
-            u.name, 
-            u.image, 
-            u.active_status as active,
-            u.created_at as join_date,
-            c.name as course_name
-        FROM users u
-        LEFT JOIN user_courses uc ON u.id = uc.user_id
-        LEFT JOIN courses c ON uc.course_id = c.id
-        WHERE u.user_code = %s
-    """
-    cursor.execute(query, (user_code,))
-    user = cursor.fetchone()
-    
-    if not user:
-        return None
-        
-    # 2. Format the date to look clean (e.g., "08 Jun 2026")
-    formatted_date = user['join_date'].strftime("%d %b %Y") if user['join_date'] else "Unknown"
-        
-    # 3. Return the dictionary with the NEW fields attached
-    return {
-        "id": user['id'],
-        "name": user['name'],
-        "image": user['image'] or "default_avatar.png",
-        "active": bool(user['active']),
-        "course": user['course_name'] or "Basic Package", # NEW
-        "join_date": formatted_date # NEW
-    }
 
 @app.route('/income-history')
 def income_history_page():
@@ -354,19 +312,19 @@ def api_my_packages():
     db = get_db_connection()
     cursor = db.cursor(dictionary=True)
     try:
-        # UPDATED: Now joins with the 'courses' table to get the name
+        # FIX: Added COALESCE and LEFT JOIN so it doesn't fail on null course IDs
         cursor.execute("""
-            SELECT DISTINCT c.name as course_name 
+            SELECT DISTINCT COALESCE(c.name, 'Basic Package') as course_name 
             FROM user_courses uc 
-            JOIN courses c ON uc.course_id = c.id 
+            LEFT JOIN courses c ON uc.course_id = c.id 
             WHERE uc.user_id = %s AND uc.status = 'ACTIVE'
         """, (session['user_id'],))
         owned_courses = [r['course_name'] for r in cursor.fetchall()]
         
         cursor.execute("""
-            SELECT DISTINCT c.name as course_name 
+            SELECT DISTINCT COALESCE(c.name, 'Basic Package') as course_name 
             FROM user_courses uc 
-            JOIN courses c ON uc.course_id = c.id 
+            LEFT JOIN courses c ON uc.course_id = c.id 
             WHERE uc.user_id = %s AND DATE(uc.created_at) = CURDATE()
         """, (session['user_id'],))
         purchased_today = [r['course_name'] for r in cursor.fetchall()]
@@ -378,16 +336,12 @@ def api_my_packages():
 
 @app.route('/api/income-history', methods=['GET'])
 def api_income_history():
-    # 1. Ensure user is logged in
     if 'user_id' not in session:
         return jsonify({'status': 'error', 'error': 'Not logged in'})
 
     user_id = session['user_id']
-    
-    # 2. Get the requested bonus type from the frontend URL and clean it
     requested_type = request.args.get('type', '').lower().strip()
 
-    # 3. Bulletproof Mapping: Catch variations of the requested name
     db_bonus_type = None
     if 'staking' in requested_type or 'roi' in requested_type:
         db_bonus_type = 'STAKING_BONUS'
@@ -398,37 +352,43 @@ def api_income_history():
     elif 'cashback' in requested_type:
         db_bonus_type = 'CASHBACK'
 
-    if not db_bonus_type:
-        return jsonify({'status': 'error', 'error': f"Unknown bonus type: '{requested_type}'"})
-
-    # 4. Fetch the data from the database
     db = get_db_connection()
     if not db:
         return jsonify({'status': 'error', 'error': 'Database connection failed'})
         
     cursor = db.cursor(dictionary=True)
     try:
-        # Fetch only CREDITS matching the exact database bonus type
-        cursor.execute("""
-            SELECT amount, created_at, description 
-            FROM wallet_transactions 
-            WHERE user_id = %s AND transaction_type = 'CREDIT' AND bonus_type = %s
-            ORDER BY created_at ASC
-        """, (user_id, db_bonus_type))
+        # FIX: If no valid type is specified, just fetch all credits to avoid crashing
+        if db_bonus_type:
+            cursor.execute("""
+                SELECT amount, created_at, description 
+                FROM wallet_transactions 
+                WHERE user_id = %s AND transaction_type = 'CREDIT' AND bonus_type = %s
+                ORDER BY created_at ASC
+            """, (user_id, db_bonus_type))
+        else:
+            cursor.execute("""
+                SELECT amount, created_at, description 
+                FROM wallet_transactions 
+                WHERE user_id = %s AND transaction_type = 'CREDIT'
+                ORDER BY created_at ASC
+            """, (user_id,))
         
         records = cursor.fetchall()
 
-        # 5. Format the data EXACTLY how your frontend JavaScript expects it
         formatted_data = []
         for index, row in enumerate(records):
+            # FIX: Safe datetime stringification
+            dt = row['created_at']
+            date_str = dt.strftime("%d %b %Y, %I:%M %p") if isinstance(dt, datetime.datetime) else str(dt)
+            
             formatted_data.append({
                 "day_count": index + 1,
-                "date": row['created_at'].strftime("%d %b %Y, %I:%M %p"), 
+                "date": date_str, 
                 "amount": float(row['amount']),
                 "description": row['description']
             })
 
-        # Reverse the list so newest entries show at the top
         formatted_data.reverse()
 
         return jsonify({
@@ -450,7 +410,6 @@ def get_withdrawal_history_api():
     
     db = get_db_connection()
     cursor = db.cursor(dictionary=True)
-    # Fetching history for the current logged-in user
     cursor.execute("""
         SELECT request_amount, net_payable, status, created_at 
         FROM withdrawals 
@@ -459,6 +418,10 @@ def get_withdrawal_history_api():
     """, (session['user_id'],))
     
     history = cursor.fetchall()
+    for row in history:
+        dt = row['created_at']
+        row['created_at'] = dt.strftime("%d %b %Y") if isinstance(dt, datetime.datetime) else str(dt)[:10]
+
     cursor.close()
     db.close()
     
@@ -476,19 +439,16 @@ def api_withdraw_request():
     db = get_db_connection()
     cursor = db.cursor(dictionary=True)
     try:
-        # 1. Fetch exact balance from users table
         cursor.execute("SELECT wallet_balance FROM users WHERE id = %s", (user_id,))
         user = cursor.fetchone()
         if not user or float(user['wallet_balance']) < amount:
             return jsonify({"status": "error", "message": "Insufficient funds"})
 
-        # 2. Save to withdrawals table (So it shows up on reload)
         cursor.execute("""
             INSERT INTO withdrawals (user_id, request_amount, net_payable, status, created_at) 
             VALUES (%s, %s, %s, 'PENDING', NOW())
-        """, (user_id, amount, amount)) # Adjust if you have TDS/Admin fees
+        """, (user_id, amount, amount)) 
         
-        # 3. Deduct from users table
         cursor.execute("UPDATE users SET wallet_balance = wallet_balance - %s WHERE id = %s", (amount, user_id))
         
         db.commit()
@@ -506,12 +466,10 @@ def api_withdraw_me():
     db = get_db_connection()
     cursor = db.cursor(dictionary=True)
     
-    # 1. Get balance from users table
     cursor.execute("SELECT wallet_balance FROM users WHERE id = %s", (session['user_id'],))
     user = cursor.fetchone()
     balance = float(user['wallet_balance']) if user else 0
     
-    # 2. Get history from withdrawals table
     cursor.execute("""
         SELECT DATE_FORMAT(created_at, '%d %b %Y') as date, request_amount as amount, status 
         FROM withdrawals 
@@ -524,13 +482,12 @@ def api_withdraw_me():
     return jsonify({"status": "success", "balance": balance, "history": history})
 
 # ==========================================
-# ADMIN API ENDPOINTS - WITH DUMMY BYPASS
+# ADMIN API ENDPOINTS
 # ==========================================
 
 @app.route('/api/admin/debug/force-midnight', methods=['GET'])
 def force_midnight():
     try:
-        # Call your exact calculation function here
         calculate_daily_incomes() 
         return jsonify({
             "status": "success", 
@@ -549,7 +506,6 @@ def api_admin_dashboard_stats():
             "inactive_users":6670,"today_joining":312,"total_deposits":1245680,
             "total_withdrawals":856210,"company_turnover":2875630,"income_distributed":1568950,
             "pending_withdrawals":125600,"today_roi":245300,"course_sales":8940,"monthly_revenue":432800})
-    # DB Logic
     db = get_db_connection()
     if not db: return jsonify({"status":"error"})
     cursor = db.cursor(dictionary=True)
@@ -562,7 +518,6 @@ def api_admin_dashboard_stats():
 
 @app.route('/api/admin/users')
 def api_admin_users():
-    # --- DUMMY DATA BLOCK FOR ADMIN ---
     if session.get('user_name') == "Super Admin":
         dummy_users = [
             {"id": 1, "user_code": "MLM001", "full_name": "Ravi Kumar", "mobile": "9876543210", "email": "ravi@example.com", "is_active": 1, "created_at": "15 Jan 2024", "sponsor_code": "Admin", "status": "Active", "wallet_balance": 12450.0},
@@ -573,7 +528,6 @@ def api_admin_users():
         ]
         return jsonify({"status":"ok","users":dummy_users,"total":5,"active":4,"inactive":1,"today":0,"page":1,"per_page":20})
 
-    # --- REAL DATABASE LOGIC ---
     db = get_db_connection()
     page = int(request.args.get('page', 1))
     per_page = int(request.args.get('per_page', 20))
@@ -599,11 +553,9 @@ def api_admin_users():
         
         where_str = "WHERE " + " AND ".join(where) if where else ""
         
-        # Get count
         cursor.execute(f"SELECT COUNT(*) as total FROM users u {where_str}", params)
         total = cursor.fetchone()['total']
         
-        # Get actual data with join for sponsor code and subquery for wallet balance
         cursor.execute(f"""
             SELECT u.id, u.user_code, u.full_name, u.mobile, u.email, u.is_active, 
                    u.created_at, s.user_code as sponsor_code,
@@ -691,7 +643,6 @@ def api_admin_user_income(user_id):
 
 @app.route('/api/admin/kyc')
 def api_admin_kyc_list():
-    # --- ADDED: DUMMY BYPASS FOR ADMIN PANEL TESTING ---
     if session.get('user_name') == "Super Admin":
         dummy_kyc = [
             {"id": 1, "full_name": "Ravi Kumar", "user_code": "MLM001", "document_type": "Aadhar Card", "document_number": "[Aadhaar Redacted]", "submitted_at": "04 Jun 2026", "status": "PENDING", "document_image": "test.jpg"},
@@ -699,7 +650,6 @@ def api_admin_kyc_list():
         ]
         return jsonify({"status":"ok", "kyc": dummy_kyc, "total": 2})
 
-    # --- REAL DATABASE LOGIC ---
     db = get_db_connection()
     status_filter = request.args.get('status','pending')
     page = int(request.args.get('page',1))
@@ -735,7 +685,6 @@ def api_admin_kyc_reject(kyc_id):
 
 @app.route('/api/admin/kyc/export')
 def api_admin_kyc_export():
-    # --- ADDED: DUMMY BYPASS FOR ADMIN EXPORT ---
     if session.get('user_name') == "Super Admin":
         import csv, io
         from flask import Response
@@ -776,10 +725,8 @@ def api_admin_packages_list():
 def api_admin_package_create():
     if session.get('user_name') == "Super Admin": return jsonify({"status":"ok","message":"Package Created (Demo Mode)"})
 
-# Route to fetch a single package for Edit
 @app.route('/api/admin/packages/<int:pid>')
 def api_get_package(pid):
-    # Matches the exact 3 demo packages from your list
     if session.get('user_name') == "Super Admin":
         demo_packages = {
             1: {"id": 1, "name": "Basic Package", "price": 5000, "roi_percent": 1.0, "duration_days": 250, "status": "Active"},
@@ -792,7 +739,6 @@ def api_get_package(pid):
         else:
             return jsonify({"status": "error", "message": "Package not found"}), 404
 
-    # Real Database Logic
     if session.get('role') != 'admin': return jsonify({"error": "Unauthorized"}), 401
     db = get_db_connection()
     cursor = db.cursor(dictionary=True)
@@ -801,7 +747,6 @@ def api_get_package(pid):
     cursor.close(); db.close()
     return jsonify({"status": "ok", "package": pkg})
 
-# Route to delete a package
 @app.route('/api/admin/packages/<int:pid>/delete', methods=['POST'])
 def api_delete_package(pid):
     if session.get('role') != 'admin': return jsonify({"error": "Unauthorized"}), 401
@@ -891,7 +836,6 @@ def api_admin_binary_export():
 
 @app.route('/api/admin/tree/<user_code>')
 def api_admin_tree_view(user_code):
-    # This calls your database function
     data = get_tree_view_data(user_code) 
     if data:
         return jsonify(data)
@@ -907,9 +851,8 @@ def get_team_list(category):
     cursor = db.cursor(dictionary=True)
     
     if category == 'directs':
-        # Added JOIN to courses table
         cursor.execute("""
-            SELECT u.user_code as id, u.full_name as name, u.is_active, u.leg, c.name as course 
+            SELECT u.user_code as id, u.full_name as name, u.is_active, u.leg, COALESCE(c.name, 'Basic Package') as course 
             FROM users u 
             LEFT JOIN user_courses uc ON u.id = uc.user_id AND uc.status = 'ACTIVE'
             LEFT JOIN courses c ON uc.course_id = c.id
@@ -920,24 +863,27 @@ def get_team_list(category):
     else:
         start_leg = 'left' if category == 'left' else 'right' if category == 'right' else None
         
-        if start_leg:
-            cursor.execute("SELECT id FROM users WHERE placement_id = %s AND leg = %s", (user_id, start_leg))
-        else:
-            cursor.execute("SELECT id FROM users WHERE placement_id = %s", (user_id,))
+        # FIX: Collect all children then partition safely if leg data is missing
+        cursor.execute("SELECT id, leg FROM users WHERE COALESCE(placement_id, sponsor_id) = %s", (user_id,))
+        all_children = cursor.fetchall()
+        
+        start_nodes = []
+        for i, child in enumerate(all_children):
+            c_leg = child['leg'] if child['leg'] else ('left' if i == 0 else 'right')
+            if start_leg is None or c_leg == start_leg:
+                start_nodes.append(child)
             
-        start_nodes = cursor.fetchall()
         members = []
         
         for node in start_nodes:
-            # Added JOIN to courses table in the recursive query
             query = """
                 WITH RECURSIVE downline AS (
                     SELECT id, user_code, full_name, is_active, leg FROM users WHERE id = %s
                     UNION ALL
                     SELECT u.id, u.user_code, u.full_name, u.is_active, d.leg 
-                    FROM users u INNER JOIN downline d ON u.placement_id = d.id
+                    FROM users u INNER JOIN downline d ON COALESCE(u.placement_id, u.sponsor_id) = d.id
                 )
-                SELECT d.user_code as id, d.full_name as name, d.is_active, d.leg, c.name as course 
+                SELECT d.user_code as id, d.full_name as name, d.is_active, d.leg, COALESCE(c.name, 'Basic Package') as course 
                 FROM downline d
                 LEFT JOIN user_courses uc ON d.id = uc.user_id AND uc.status = 'ACTIVE'
                 LEFT JOIN courses c ON uc.course_id = c.id
@@ -977,7 +923,6 @@ def api_admin_level_export():
 @app.route('/api/admin/repurchase/settings', methods=['POST'])
 def api_admin_repurchase_settings():
     if session.get('user_name') == "Super Admin":
-        # Add your DB update logic here
         return jsonify({"status": "ok", "message": "Repurchase settings saved!"})
     return jsonify({"error": "Unauthorized"}), 401
 
@@ -995,23 +940,18 @@ def api_admin_repurchase_export():
 
 @app.route('/api/admin/royalty/ranks/<int:rid>', methods=['GET'])
 def api_admin_get_rank(rid):
-    # Add DB query to fetch rank details
     return jsonify({"status": "ok", "rank": {"id": rid, "name": "Silver Captain", "royalty_percent": 0.5}})
 
 @app.route('/api/admin/royalty/ranks/<int:rid>/delete', methods=['POST'])
 def api_admin_delete_rank(rid):
-    # Add DB query to delete rank
     return jsonify({"status": "ok", "message": "Rank deleted successfully"})
 
 @app.route('/api/admin/royalty/export')
 def api_admin_royalty_export():
-    # 1. Create the CSV data in memory
     output = io.StringIO()
     writer = csv.writer(output)
     writer.writerow(['User', 'Rank', 'Left Team', 'Right Team', 'Achieved On', 'Monthly Royalty', 'Status'])
     writer.writerow(['Ravi Kumar', 'Diamond Captain', '2,450', '1,980', 'Jan 2024', '12,400', 'Active'])
-    
-    # 2. Return a Response that triggers a download
     return Response(
         output.getvalue(),
         mimetype='text/csv',
@@ -1042,23 +982,16 @@ def api_admin_manual_deposit():
 def api_admin_deposits_export():
     import csv, io
     from flask import Response
-    
-    # 1. Prepare CSV data
     output = io.StringIO()
     writer = csv.writer(output)
     writer.writerow(['User', 'Amount', 'Method', 'Txn ID', 'Submitted', 'Status'])
-    
-    # Replace this with your actual database query
     writer.writerow(['MLM211', '5000', 'UPI', 'TXN123456', '04 Jun 2026', 'PENDING'])
-    
-    # 2. Return as a file download
     return Response(
         output.getvalue(),
         mimetype='text/csv',
         headers={"Content-Disposition": "attachment; filename=deposits_report.csv"}
     )
 
-#---WITHDRAWALS---
 @app.route('/api/admin/withdrawals')
 def api_admin_withdrawals():
     USE_DEMO_DATA = True 
@@ -1077,7 +1010,6 @@ def api_admin_withdrawals():
                     "net_payable": 8800, 
                     "created_at": "04 Jun 2026", 
                     "status": "PENDING",
-                    # --- ADD THESE FIELDS ---
                     "account_holder": "Ravi Kumar",
                     "bank_name": "State Bank of India",
                     "account_no": "123456789012",
@@ -1092,7 +1024,6 @@ def api_admin_withdrawals():
                     "net_payable": 4400, 
                     "created_at": "03 Jun 2026", 
                     "status": "APPROVED",
-                    # --- ADD THESE FIELDS ---
                     "account_holder": "Arun Prakash",
                     "bank_name": "HDFC Bank",
                     "account_no": "987654321098",
@@ -1101,7 +1032,6 @@ def api_admin_withdrawals():
             ]
         })
 
-    # DATABASE MODE
     if session.get('role') != 'admin':
         return jsonify({"error": "Unauthorized"}), 401
 
@@ -1137,7 +1067,6 @@ def api_admin_withdrawal_approve(wid):
     
     db = get_db_connection()
     cursor = db.cursor()
-    # Update status in DB
     cursor.execute("UPDATE withdrawals SET status='APPROVED' WHERE id=%s", (wid,))
     db.commit()
     cursor.close(); db.close()
@@ -1150,13 +1079,11 @@ def api_admin_withdrawal_reject(wid):
 @app.route('/api/admin/withdrawals/<int:wid>/hold', methods=['POST'])
 def api_admin_withdrawal_hold(wid):
     if session.get('user_name') == "Super Admin":
-        # Add your database 'UPDATE' logic here
         return jsonify({"status": "ok", "message": "Withdrawal held successfully!"})
     return jsonify({"error": "Unauthorized"}), 401
 
 @app.route('/api/admin/withdrawals/<int:wid>')
 def api_admin_get_withdrawal(wid):
-    # DEMO MODE
     if session.get('user_name') == "Super Admin":
         dummy_data = {
             1: {
@@ -1178,13 +1105,11 @@ def api_admin_get_withdrawal(wid):
             return jsonify({"status": "ok", "withdrawal": dummy_data[wid]})
         return jsonify({"status": "error", "message": "Not found"}), 404
 
-    # REAL DB MODE
     if session.get('role') != 'admin': return jsonify({"error": "Unauthorized"}), 401
         
     db = get_db_connection()
     cursor = db.cursor(dictionary=True)
     try:
-        # We explicitly join the bank_details table here
         cursor.execute("""
             SELECT w.*, u.full_name, u.user_code, 
                    b.account_holder, b.bank_name, b.account_no, b.ifsc_code 
@@ -1198,7 +1123,6 @@ def api_admin_get_withdrawal(wid):
         if not withdrawal:
             return jsonify({"status": "error", "message": "Not found"}), 404
             
-        # Ensure dates are strings for JSON
         if isinstance(withdrawal.get('created_at'), datetime.datetime):
              withdrawal['created_at'] = withdrawal['created_at'].strftime('%d %b %Y')
              
@@ -1212,12 +1136,10 @@ def api_admin_get_withdrawal(wid):
 def api_admin_withdrawals_export():
     if session.get('role') != 'admin': return "Unauthorized", 401
     
-    # Simple CSV Export
     output = io.StringIO()
     writer = csv.writer(output)
     writer.writerow(['User Code', 'Full Name', 'Amount', 'TDS', 'Net Payable', 'Status', 'Date'])
     
-    # Use dummy data or DB query here
     writer.writerow(['MLM001', 'Ravi Kumar', '10000', '500', '8800', 'PENDING', '04 Jun 2026'])
     
     return Response(output.getvalue(), mimetype='text/csv', 
@@ -1239,7 +1161,6 @@ def api_admin_wallet_ledger():
             {"user_code":"MLM002", "full_name":"Suresh Babu", "transaction_type":"DEBIT", "amount": 5000, "remarks":"Bank Transfer", "created_at":"03 Jun 2026"}
         ]})
 
-# TREE
 @app.route('/api/admin/tree/move', methods=['POST'])
 def api_admin_move_user():
     if session.get('role') != 'admin': return jsonify({"error": "Unauthorized"}), 401
@@ -1251,14 +1172,12 @@ def api_admin_move_user():
     db = get_db_connection()
     cursor = db.cursor(dictionary=True)
     try:
-        # 1. Find the new parent ID
         cursor.execute("SELECT id FROM users WHERE user_code = %s", (new_parent_code,))
         parent = cursor.fetchone()
         
         if not parent:
             return jsonify({"status": "error", "message": "New parent not found!"}), 404
         
-        # 2. Update the user's parent/sponsor in the database
         cursor.execute("UPDATE users SET sponsor_id = %s WHERE id = %s", (parent['id'], user_id))
         db.commit()
         
@@ -1267,7 +1186,6 @@ def api_admin_move_user():
         return jsonify({"status": "error", "message": str(e)}), 500
     finally:
         cursor.close(); db.close()
-# --- ROI -----
 
 @app.route('/api/admin/roi/logs')
 def api_admin_roi_logs():
@@ -1305,31 +1223,23 @@ def api_admin_roi_export():
         return Response(output.getvalue(), mimetype='text/csv', headers={"Content-Disposition":"attachment;filename=roi_logs.csv"})
     return jsonify({"error": "Unauthorized"}), 401
 
-# --- DIRECT BONUS ---
 @app.route('/api/admin/direct-bonus/settings', methods=['POST'])
 def api_admin_direct_bonus_settings():
     if session.get('user_name') == "Super Admin":
         data = request.get_json()
-        # Add your database logic here to save these percentages
         return jsonify({"status": "ok", "message": "Settings saved successfully!"})
     return jsonify({"error": "Unauthorized"}), 401
 
 @app.route('/api/admin/direct-bonus/export')
 def api_admin_direct_bonus_export():
-    fmt = request.args.get('format', 'excel') # 'excel' or 'pdf'
+    fmt = request.args.get('format', 'excel')
     
-    # 1. Create a memory buffer for the CSV data
     output = io.StringIO()
     writer = csv.writer(output)
-    
-    # 2. Add header row
     writer.writerow(['User', 'Referred', 'Package', 'Bonus %', 'Amount', 'Date', 'Status'])
-    
-    # 3. Add sample data (Replace this with your real DB query later)
     writer.writerow(['Ravi Kumar', 'MLM211', 'Advanced', '10%', '2500', '04 Jun 2026', 'Credited'])
     writer.writerow(['Suresh Babu', 'MLM212', 'Master', '8%', '960', '03 Jun 2026', 'Credited'])
     
-    # 4. Return the data as a downloadable file
     response = Response(output.getvalue(), mimetype='text/csv')
     response.headers["Content-Disposition"] = f"attachment; filename=direct_bonus_report.{fmt}"
     return response
@@ -1347,7 +1257,6 @@ def api_admin_income_reports():
 def api_admin_income_reports_export():
     if session.get('role') != 'admin': return "Unauthorized", 401
     
-    # In a real app, query your DB here. For now, using your data format:
     data = [
         {"user_code": "MLM001", "full_name": "Ravi Kumar", "bonus_type": "ROI", "amount": 93750, "created_at": "04 Jun 2026"},
         {"user_code": "MLM002", "full_name": "Suresh Babu", "bonus_type": "DIRECT", "amount": 18000, "created_at": "03 Jun 2026"},
@@ -1371,17 +1280,15 @@ def api_admin_audit_logs():
             {"log_type": "WALLET", "action": "Wallet Credited", "detail": "₹375 credited to Ravi Kumar", "created_at": "04 Jun 2026"},
             {"log_type": "WITHDRAWAL", "action": "Withdrawal Approved", "detail": "₹4,400 paid to Arun Prakash", "created_at": "03 Jun 2026"}
         ]})
+
 @app.route('/api/admin/audit-logs/all')
 def api_admin_audit_logs_all():
     if session.get('role') != 'admin': return jsonify({"error": "Unauthorized"}), 401
     
-    # Replace this with your actual database query
-    # Example: cursor.execute("SELECT user_name, action, ip_address, created_at FROM audit_logs")
     logs = [
         {"user_name": "Admin", "action": "Logged in", "ip_address": "192.168.1.1", "created_at": "2026-06-07 10:00"},
         {"user_name": "Ravi Kumar", "action": "Updated profile", "ip_address": "103.22.1.5", "created_at": "2026-06-07 12:30"}
     ]
-    
     return jsonify({"status": "ok", "logs": logs})
 
 @app.route('/api/admin/tickets')
@@ -1442,26 +1349,15 @@ def api_admin_update_settings():
         
     data = request.get_json()
     section = data.get('section')
-    
-    # Logic: print the data to see what's arriving in your terminal
     print(f"Saving {section} data:", data)
-    
-    # TODO: Add your SQL UPDATE queries here
-    # Example:
-    # if section == 'company_info':
-    #     cursor.execute("UPDATE system_settings SET company_name=%s ...", (data['company_name'],))
-    
     return jsonify({"status": "ok", "message": f"{section.replace('_', ' ').capitalize()} updated!"})
 
-#--- CRON JOBS 
 @app.route('/api/admin/cron/run', methods=['POST'])
 def api_admin_run_cron():
-    # You must trigger your actual background task here
     return jsonify({"status": "ok", "message": "Job triggered successfully!"})
 
 @app.route('/api/admin/cron/logs')
 def api_admin_cron_logs():
-    # Return your log data here
     return jsonify({
         "status": "ok",
         "logs": [
@@ -1471,12 +1367,10 @@ def api_admin_cron_logs():
 
 @app.route('/api/admin/admins/<int:aid>')
 def get_admin(aid):
-    # Return dummy data for testing
     return jsonify({"status": "ok", "admin": {"id": aid, "name": "Admin User", "email": "admin@test.com", "role": "Super Admin"}})
 
 @app.route('/api/admin/admins/<int:aid>/delete', methods=['POST'])
 def delete_admin(aid):
-    # Perform your DB DELETE here
     return jsonify({"status": "ok", "message": "Admin deleted successfully!"})
 
 @app.route('/api/admin/sub-admins')
@@ -1514,7 +1408,6 @@ def api_admin_royalty_rank_delete(rid):
 
 @app.route('/api/admin/courses')
 def api_admin_courses_list():
-    # DUMMY BYPASS FOR ADMIN PANEL TESTING
     if session.get('user_name') == "Super Admin":
         return jsonify({"status":"ok", "total": 3, "courses": [
             {"id": 1, "name": "MLM Business Basics", "category": "Business", "price": 5000, "total_cnt": 3120, "visibility": "Public", "status": "Active"},
@@ -1522,14 +1415,11 @@ def api_admin_courses_list():
             {"id": 3, "name": "Financial Freedom Masterclass", "category": "Finance", "price": 25000, "total_cnt": 2180, "visibility": "App Only", "status": "Active"}
         ]})
 
-    # REAL DATABASE LOGIC
     db = get_db_connection()
-    if not db: 
-        return jsonify({"status":"error", "message": "Database connection failed"}), 500
+    if not db: return jsonify({"status":"error", "message": "Database connection failed"}), 500
     
     cursor = db.cursor(dictionary=True)
     try:
-        # Assuming you have a 'courses' table with columns: id, name, category, price, total_cnt, visibility, status
         cursor.execute("""
             SELECT id, name, category, price, total_cnt, visibility, status 
             FROM courses 
@@ -1543,13 +1433,10 @@ def api_admin_courses_list():
         cursor.close()
         db.close()
 
-# Route to fetch a single course for View/Edit
-# Updated Route to fetch a single course (Secured)
 @app.route('/api/admin/courses/<int:cid>')
 def api_get_course(cid):
     if session.get('role') != 'admin': return jsonify({"error": "Unauthorized"}), 401
     
-    # Bypass for Demo Mode
     if session.get('user_name') == "Super Admin":
         return jsonify({"status":"ok", "course": {"id": cid, "name": "MLM Business Basics", "price": 5000}})
         
@@ -1560,13 +1447,10 @@ def api_get_course(cid):
     cursor.close(); db.close()
     return jsonify({"status": "ok", "course": course})
 
-# Updated Route to delete (Secured)
 @app.route('/api/admin/courses/<int:cid>/delete', methods=['POST'])
 def api_delete_course(cid):
-    # Security Check
     if session.get('role') != 'admin': return jsonify({"error": "Unauthorized"}), 401
     
-    # Bypass for Demo Mode
     if session.get('user_name') == "Super Admin":
         return jsonify({"status": "ok", "message": "Deleted in Demo Mode"})
         
