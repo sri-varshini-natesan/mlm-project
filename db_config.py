@@ -161,57 +161,9 @@ def find_user_by_user_code(user_code):
         return cursor.fetchone()
     finally:
         cursor.close()
-        db.close()
+        db.close()  
 
 def get_team_stats(user_id):
-    db = get_db_connection()
-    if not db: return None
-    cursor = db.cursor(dictionary=True)
-    try:
-        cursor.execute("SELECT COUNT(*) as directs FROM users WHERE sponsor_id = %s", (user_id,))
-        directs = cursor.fetchone()['directs']
-
-        # FIX: Handle missing leg and placement_id robustly
-        cursor.execute("SELECT id, leg FROM users WHERE COALESCE(placement_id, sponsor_id) = %s", (user_id,))
-        children = cursor.fetchall()
-        
-        left_child_id = None
-        right_child_id = None
-        
-        for i, child in enumerate(children):
-            c_leg = child['leg']
-            if not c_leg: c_leg = 'left' if i == 0 else 'right'
-            if c_leg.lower() == 'left' and not left_child_id:
-                left_child_id = child['id']
-            elif c_leg.lower() == 'right' and not right_child_id:
-                right_child_id = child['id']
-
-      def get_team_stats(user_id):
-    db = get_db_connection()
-    if not db: return None
-    cursor = db.cursor(dictionary=True)
-    try:
-        # 1. Direct Referrals
-        cursor.execute("SELECT COUNT(*) as directs FROM users WHERE sponsor_id = %s", (user_id,))
-        directs = cursor.fetchone()['directs']
-
-        # 2. Get children and separate by leg
-        cursor.execute("SELECT id, leg FROM users WHERE COALESCE(placement_id, sponsor_id) = %s", (user_id,))
-        children = cursor.fetchall()
-        
-        left_child_id = None
-        right_child_id = None
-        
-        # Explicitly assign legs if they exist
-        for child in children:
-            c_leg = str(child['leg']).lower() if child['leg'] else None
-            if c_leg == 'left':
-                left_child_id = child['id']
-            elif c_leg == 'right':
-                right_child_id = child['id']
-
-        # 3. Dedicated downline counter
-    def get_team_stats(user_id):
     db = get_db_connection()
     if not db: return None
     cursor = db.cursor(dictionary=True)
