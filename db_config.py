@@ -211,30 +211,31 @@ def get_team_stats(user_id):
                 right_child_id = child['id']
 
         # 3. Dedicated downline counter
-        def get_team_stats(user_id):
+    def get_team_stats(user_id):
     db = get_db_connection()
     if not db: return None
     cursor = db.cursor(dictionary=True)
     try:
+        # 1. Direct Referrals
         cursor.execute("SELECT COUNT(*) as directs FROM users WHERE sponsor_id = %s", (user_id,))
         directs = cursor.fetchone()['directs']
 
-        # Get all children (both legs)
+        # 2. Get children
         cursor.execute("SELECT id, leg FROM users WHERE COALESCE(placement_id, sponsor_id) = %s", (user_id,))
         children = cursor.fetchall()
         
-        # Use a dictionary to store lists of children IDs for each leg
         legs = {'left': [], 'right': []}
-        for child in children:
-            c_leg = str(child['leg']).lower() if child['leg'] else 'left' # Defaulting unassigned to left
+        for i, child in enumerate(children):
+            c_leg = str(child['leg']).lower() if child['leg'] else ('left' if i == 0 else 'right')
             if c_leg in legs:
                 legs[c_leg].append(child['id'])
 
+        # 3. Recursive counter
         def count_downline_list(child_ids):
             if not child_ids: return {"total": 0, "active": 0, "inactive": 0}
             
-            # Use placeholders for multiple IDs
             placeholders = ','.join(['%s'] * len(child_ids))
+            # Fixed query: counts children only (using total-1 to exclude root)
             query = f"""
                 WITH RECURSIVE downline AS (
                     SELECT id, is_active FROM users WHERE id IN ({placeholders})
@@ -266,7 +267,8 @@ def get_team_stats(user_id):
             "total_team": left_stats['total'] + right_stats['total']
         }
     finally:
-        cursor.close(); db.close()
+        cursor.close()
+        db.close()
 
 def get_financial_stats(user_id):
     db = get_db_connection()
