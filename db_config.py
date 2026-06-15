@@ -187,45 +187,33 @@ def get_team_stats(user_id):
                 right_child_id = child['id']
 
         def count_downline(start_id):
-            if not start_id: return {"total": 0, "active": 0, "inactive": 0}
-            
-            # FIX: Fallback to sponsor_id if placement_id is NULL
-            query = """
-                WITH RECURSIVE downline AS (
-                    SELECT id, is_active FROM users WHERE id = %s
-                    UNION ALL
-                    SELECT u.id, u.is_active FROM users u INNER JOIN downline d ON COALESCE(u.placement_id, u.sponsor_id) = d.id
-                )
-                SELECT COUNT(*) as total, 
-                       SUM(CASE WHEN is_active=1 THEN 1 ELSE 0 END) as active, 
-                       SUM(CASE WHEN is_active=0 THEN 1 ELSE 0 END) as inactive 
-                FROM downline;
-            """
-            sub_cursor = db.cursor(dictionary=True)
-            sub_cursor.execute(query, (start_id,))
-            res = sub_cursor.fetchone()
-            sub_cursor.close()
-            
-            return {
-                "total": int(res['total'] or 0), 
-                "active": int(res['active'] or 0), 
-                "inactive": int(res['inactive'] or 0)
-            }
-
-        left_stats = count_downline(left_child_id)
-        right_stats = count_downline(right_child_id)
-
-        return {
-            "direct_referrals": directs,
-            "left_team": left_stats['total'],
-            "right_team": right_stats['total'],
-            "active_team": left_stats['active'] + right_stats['active'],
-            "non_active": left_stats['inactive'] + right_stats['inactive'],
-            "total_team": left_stats['total'] + right_stats['total']
-        }
-    finally:
-        cursor.close()
-        db.close()
+    if not start_id: return {"total": 0, "active": 0, "inactive": 0}
+    
+    # FIX: Use COALESCE to check both placement_id and sponsor_id for the downline link
+    query = """
+        WITH RECURSIVE downline AS (
+            SELECT id, is_active FROM users WHERE id = %s
+            UNION ALL
+            SELECT u.id, u.is_active 
+            FROM users u 
+            INNER JOIN downline d ON COALESCE(u.placement_id, u.sponsor_id) = d.id
+        )
+        SELECT COUNT(*) as total, 
+               SUM(CASE WHEN is_active=1 THEN 1 ELSE 0 END) as active, 
+               SUM(CASE WHEN is_active=0 THEN 1 ELSE 0 END) as inactive 
+        FROM downline
+        WHERE id != %s; -- Exclude the root user themselves from the downline count
+    """
+    sub_cursor = db.cursor(dictionary=True)
+    sub_cursor.execute(query, (start_id, start_id))
+    res = sub_cursor.fetchone()
+    sub_cursor.close()
+    
+    return {
+        "total": int(res['total'] or 0), 
+        "active": int(res['active'] or 0), 
+        "inactive": int(res['inactive'] or 0)
+    }
 
 def get_financial_stats(user_id):
     db = get_db_connection()
