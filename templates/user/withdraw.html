@@ -82,10 +82,16 @@
 
         @media (max-width: 1024px) { .grid-2 { grid-template-columns: 1fr; } }
         @media (max-width: 900px) { 
-            #menuToggle { display: block !important; }
+            /* Show the hamburger menu icon */
+            #menuToggle { display: flex !important; align-items: center; justify-content: center; } 
+            
             .sidebar { position: fixed; left: -260px; top: 0; height: 100vh; z-index: 1000; } 
             .sidebar.active { left: 0; } 
-            .main-content { width: 100%; } 
+            .main-content { width: 100%; transition: var(--transition); } 
+            
+            /* When sidebar is active, push main content slightly or just cover it */
+            .sidebar.active ~ .main-content { margin-left: 260px; }
+            
             .top-header { padding: 16px 20px; } 
         }
     </style>
@@ -163,37 +169,32 @@
 
 <script>
     document.addEventListener("DOMContentLoaded", () => {
-        // Fetch data from backend
-        fetch('/api/withdraw/me')
-            .then(res => res.json())
-            .then(data => {
-                if (data.status === 'success') {
-                    // Update Balance
-                    document.getElementById('availBalance').innerText = '₹ ' + (data.balance || 0).toLocaleString('en-IN', {minimumFractionDigits: 2});
-                    
-                    // Populate Table
-                    const tbody = document.getElementById('historyTableBody');
-                    tbody.innerHTML = ''; 
-                    
-                    if (!data.history || data.history.length === 0) {
-                        tbody.innerHTML = '<tr><td colspan="3" style="text-align: center; color: var(--text-muted);">No recent transactions</td></tr>';
-                    } else {
-                        data.history.forEach(item => {
-                            renderRow(tbody, item.date, item.amount, item.status);
-                        });
-                    }
-                }
-            })
-            .catch(err => console.error("Error:", err));
-    });
+        // --- ADD THIS LOGIC ---
+        const menuToggle = document.getElementById('menuToggle');
+        const sidebar = document.getElementById('sidebar');
 
+        menuToggle.addEventListener('click', () => {
+            sidebar.classList.toggle('active');
+        });
+
+        // Close sidebar when clicking outside on mobile
+        document.addEventListener('click', (e) => {
+            if (window.innerWidth <= 900) {
+                if (!sidebar.contains(e.target) && e.target !== menuToggle) {
+                    sidebar.classList.remove('active');
+                }
+            }
+        });
+    });
     // Helper to render a row
     function renderRow(tbody, date, amount, status) {
         let statusColor = status.toUpperCase() === 'PENDING' ? 'var(--color-orange)' : 'var(--color-green)';
+        let formattedAmount = parseFloat(amount).toLocaleString('en-IN', {minimumFractionDigits: 2});
+        
         tbody.innerHTML += `
             <tr style="border-bottom: 1px solid #eee;">
                 <td style="padding: 12px;">${date}</td>
-                <td style="padding: 12px;">₹ ${amount.toLocaleString('en-IN', {minimumFractionDigits: 2})}</td>
+                <td style="padding: 12px;">₹ ${formattedAmount}</td>
                 <td style="padding: 12px; font-weight: 800; color: ${statusColor};">${status.toUpperCase()}</td>
             </tr>
         `;
@@ -209,15 +210,40 @@
         if (amt < 100) return alert("Minimum withdrawal is ₹ 100");
         if (amt > currentBal) return alert("Insufficient funds!");
 
-        // Update UI immediately
-        const tbody = document.getElementById('historyTableBody');
-        if(tbody.innerHTML.includes("No recent transactions")) tbody.innerHTML = '';
-        renderRow(tbody, new Date().toLocaleDateString('en-GB'), amt, 'PENDING');
-        
-        // Update balance
-        document.getElementById('availBalance').innerText = '₹ ' + (currentBal - amt).toLocaleString('en-IN', {minimumFractionDigits: 2});
-        amtInput.value = '';
-        alert("Withdrawal requested successfully!");
+        // --- THE FIX: Send the data to the backend ---
+        fetch('/api/withdraw/request', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ amount: amt }) // Sending the amount to Python
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === 'success') {
+                // Only update the UI if the database successfully saved it
+                const tbody = document.getElementById('historyTableBody');
+                if(tbody.innerHTML.includes("No recent transactions")) tbody.innerHTML = '';
+                
+                // Format today's date
+                let today = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+                renderRow(tbody, today, amt, 'PENDING');
+                
+                // Update balance on screen
+                document.getElementById('availBalance').innerText = '₹ ' + (currentBal - amt).toLocaleString('en-IN', {minimumFractionDigits: 2});
+                amtInput.value = '';
+                
+                // Show success message from the backend (includes TDS/Admin fee details)
+                alert(data.message);
+            } else {
+                // Show error message if the backend rejected it
+                alert("Error: " + data.message);
+            }
+        })
+        .catch(err => {
+            console.error("Error:", err);
+            alert("A network error occurred. Please try again.");
+        });
     });
 
     document.querySelector('a[href="/logout"]')?.addEventListener('click', function(e) {
