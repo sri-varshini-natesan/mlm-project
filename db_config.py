@@ -211,35 +211,51 @@ def get_team_stats(user_id):
                 right_child_id = child['id']
 
         # 3. Dedicated downline counter
-        def count_downline(start_id):
-            if not start_id: return {"total": 0, "active": 0, "inactive": 0}
+        def get_team_stats(user_id):
+    db = get_db_connection()
+    if not db: return None
+    cursor = db.cursor(dictionary=True)
+    try:
+        cursor.execute("SELECT COUNT(*) as directs FROM users WHERE sponsor_id = %s", (user_id,))
+        directs = cursor.fetchone()['directs']
+
+        # Get all children (both legs)
+        cursor.execute("SELECT id, leg FROM users WHERE COALESCE(placement_id, sponsor_id) = %s", (user_id,))
+        children = cursor.fetchall()
+        
+        # Use a dictionary to store lists of children IDs for each leg
+        legs = {'left': [], 'right': []}
+        for child in children:
+            c_leg = str(child['leg']).lower() if child['leg'] else 'left' # Defaulting unassigned to left
+            if c_leg in legs:
+                legs[c_leg].append(child['id'])
+
+        def count_downline_list(child_ids):
+            if not child_ids: return {"total": 0, "active": 0, "inactive": 0}
             
-            query = """
+            # Use placeholders for multiple IDs
+            placeholders = ','.join(['%s'] * len(child_ids))
+            query = f"""
                 WITH RECURSIVE downline AS (
-                    SELECT id, is_active FROM users WHERE id = %s
+                    SELECT id, is_active FROM users WHERE id IN ({placeholders})
                     UNION ALL
                     SELECT u.id, u.is_active 
                     FROM users u 
                     INNER JOIN downline d ON COALESCE(u.placement_id, u.sponsor_id) = d.id
                 )
-                SELECT COUNT(*) - 1 as total, 
+                SELECT COUNT(*) as total, 
                        SUM(CASE WHEN is_active=1 THEN 1 ELSE 0 END) as active, 
                        SUM(CASE WHEN is_active=0 THEN 1 ELSE 0 END) as inactive 
-                FROM downline WHERE id != %s;
+                FROM downline;
             """
             sub_cursor = db.cursor(dictionary=True)
-            sub_cursor.execute(query, (start_id, start_id))
+            sub_cursor.execute(query, tuple(child_ids))
             res = sub_cursor.fetchone()
             sub_cursor.close()
-            
-            return {
-                "total": int(res['total'] or 0), 
-                "active": int(res['active'] or 0), 
-                "inactive": int(res['inactive'] or 0)
-            }
+            return {"total": int(res['total'] or 0), "active": int(res['active'] or 0), "inactive": int(res['inactive'] or 0)}
 
-        left_stats = count_downline(left_child_id)
-        right_stats = count_downline(right_child_id)
+        left_stats = count_downline_list(legs['left'])
+        right_stats = count_downline_list(legs['right'])
 
         return {
             "direct_referrals": directs,
@@ -250,8 +266,7 @@ def get_team_stats(user_id):
             "total_team": left_stats['total'] + right_stats['total']
         }
     finally:
-        cursor.close()
-        db.close()
+        cursor.close(); db.close()
 
 def get_financial_stats(user_id):
     db = get_db_connection()
