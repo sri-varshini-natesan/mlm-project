@@ -67,30 +67,6 @@ def inject_user_data():
         'profile_img': img
     }
     
-@app.route('/debug/init-and-check')
-def debug_init():
-    db = get_db_connection()
-    cursor = db.cursor(dictionary=True)
-    
-    # 1. Ensure the users table exists (in case Aiven is empty)
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS users (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            full_name VARCHAR(255),
-            user_code VARCHAR(50) UNIQUE,
-            password VARCHAR(255),
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    """)
-    db.commit()
-    
-    # 2. Check what's in there
-    cursor.execute("SELECT user_code, full_name FROM users")
-    users = cursor.fetchall()
-    
-    cursor.close()
-    db.close()
-    return f"Current Users: {users}"
 # ==========================================
 # PAGE ROUTES
 # ==========================================
