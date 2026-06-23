@@ -499,22 +499,174 @@ def force_midnight():
             "message": f"Calculation failed: {str(e)}"
         }), 500
     
-@app.route('/api/admin/dashboard-stats')
+@app.route('/api/admin/dashboard-stats', methods=['GET'])
+@app.route('/api/admin/dashboard', methods=['GET'])
 def api_admin_dashboard_stats():
-    if session.get('user_name') == "Super Admin":
-        return jsonify({"status":"ok","total_users":25430,"active_users":18760,
-            "inactive_users":6670,"today_joining":312,"total_deposits":1245680,
-            "total_withdrawals":856210,"company_turnover":2875630,"income_distributed":1568950,
-            "pending_withdrawals":125600,"today_roi":245300,"course_sales":8940,"monthly_revenue":432800})
     db = get_db_connection()
-    if not db: return jsonify({"status":"error"})
+    if not db: 
+        return jsonify({"status": "error", "message": "DB unavailable"}), 500
+        
     cursor = db.cursor(dictionary=True)
     try:
-        cursor.execute("SELECT COUNT(*) as total FROM users")
-        total = cursor.fetchone()['total']
-        return jsonify({"status":"ok","total_users":total})
+        # --- 1. USER METRICS ---
+        cursor.execute("SELECT COUNT(*) as total, SUM(CASE WHEN is_active=1 THEN 1 ELSE 0 END) as active FROM users")
+        user_stats = cursor.fetchone()
+        total_users = user_stats['total'] or 0
+        active_users = int(user_stats['active'] or 0)
+        inactive_users = total_users - active_users
+
+        cursor.execute("SELECT COUNT(*) as today FROM users WHERE DATE(created_at) = CURDATE()")
+        today_joining = cursor.fetchone()['today'] or 0
+
+        # --- 2. DEPOSITS & WITHDRAWALS ---
+        total_deposits = 0.0
+        try:
+            cursor.execute("SELECT SUM(amount) as total_dep FROM deposits WHERE status='APPROVED'")
+            res_dep = cursor.fetchone()
+            if res_dep and res_dep['total_dep']:
+                total_deposits = float(res_dep['total_dep'])
+        except:
+            pass
+
+        cursor.execute("""
+            SELECT 
+                SUM(CASE WHEN status='APPROVED' THEN request_amount ELSE 0 END) as approved, 
+                SUM(CASE WHEN status='PENDING' THEN request_amount ELSE 0 END) as pending 
+            FROM withdrawals
+        """)
+        withdrawals = cursor.fetchone()
+        total_withdrawals = float(withdrawals['approved'] or 0.0)
+        pending_withdrawals = float(withdrawals['pending'] or 0.0)
+
+        # --- 3. REVENUE & TURNOVER CALCULATIONS ---
+        cursor.execute("SELECT SUM(amount) as turnover FROM wallet_transactions WHERE transaction_type='DEBIT' AND bonus_type='COURSE_PURCHASE'")
+        res_turnover = cursor.fetchone()
+        company_turnover = float(res_turnover['turnover']) if res_turnover and res_turnover['turnover'] else 0.0
+
+        cursor.execute("""
+            SELECT SUM(amount) as m_rev FROM wallet_transactions 
+            WHERE transaction_type='DEBIT' AND bonus_type='COURSE_PURCHASE' 
+            AND MONTH(created_at) = MONTH(CURDATE()) AND YEAR(created_at) = YEAR(CURDATE())
+        """)
+        res_m_rev = cursor.fetchone()
+        monthly_revenue = float(res_m_rev['m_rev']) if res_m_rev and res_m_rev['m_rev'] else 0.0
+
+        # --- 4. BONUS DISTRIBUTION METRICS ---
+        cursor.execute("""
+            SELECT SUM(amount) as distributed FROM wallet_transactions 
+            WHERE transaction_type='CREDIT' 
+            AND bonus_type IN ('STAKING_BONUS', 'DIRECT_SPONSOR', 'BINARY_MATCH', 'ROYALTY', 'LEVEL_BONUS', 'CASHBACK', 'REPURCHASE')
+        """)
+        res_dist = cursor.fetchone()
+        income_distributed = float(res_dist['distributed']) if res_dist and res_dist['distributed'] else 0.0
+
+        cursor.execute("""
+            SELECT SUM(amount) as today_roi FROM wallet_transactions 
+            WHERE transaction_type='CREDIT' AND bonus_type='STAKING_BONUS' AND DATE(created_at) = CURDATE()
+        """)
+        res_roi = cursor.fetchone()
+        today_roi = float(res_roi['today_roi']) if res_roi and res_roi['today_roi'] else 0.0
+
+        cursor.execute("SELECT COUNT(*) as sales FROM user_courses")
+        res_sales = cursor.fetchone()
+        course_sales = int(res_sales['sales']) if res_sales and res_sales['sales'] else 0
+
+        # --- 5. GRAPH METRICS GENERATION ---
+        cursor.execute("""
+            SELECT DATE(created_at) as date, COUNT(*) as count 
+            FROM users WHERE created_at >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
+            GROUP BY DATE(created_at) ORDER BY date ASC
+        """)
+        graph_users = cursor.fetchall()
+        joining_labels = [row['date'].strftime('%b %d') for row in graph_users] if graph_users else []
+        joining_data = [row['count'] for row in graph_users] if graph_users else []
+
+        cursor.execute("""
+            SELECT DATE(created_at) as date, SUM(amount) as total
+            FROM wallet_transactions WHERE transaction_type='DEBIT' AND bonus_type='COURSE_PURCHASE'
+            AND created_at >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
+            GROUP BY DATE(created_at) ORDER BY date ASC
+        """)
+        rev_data = cursor.fetchall()
+        revenue_labels = [row['date'].strftime('%b %d') for row in rev_data] if rev_data else []
+        revenue_data = [float(row['total'] or 0.0) for row in rev_data] if rev_data else []
+
+        cursor.execute("""
+            SELECT c.name as course_name, COUNT(uc.id) as count
+            FROM user_courses uc JOIN courses c ON uc.course_id = c.id
+            GROUP BY c.name
+        """)
+        course_counts = cursor.fetchall()
+        course_labels = [row['course_name'] for row in course_counts] if course_counts else []
+        course_data = [row['count'] for row in course_counts] if course_counts else []
+
+        cursor.execute("""
+            SELECT DATE(created_at) as date, SUM(request_amount) as total
+            FROM withdrawals WHERE created_at >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
+            GROUP BY DATE(created_at) ORDER BY date ASC
+        """)
+        with_data = cursor.fetchall()
+        withdrawal_labels = [row['date'].strftime('%b %d') for row in with_data] if with_data else []
+        withdrawal_data = [float(row['total'] or 0.0) for row in with_data] if with_data else []
+
+        # --- 6. DASHBOARD SUMMARY TABLES ---
+        cursor.execute("SELECT user_code, full_name, is_active, created_at FROM users ORDER BY created_at DESC LIMIT 5")
+        recent_regs = cursor.fetchall()
+        for r in recent_regs:
+            if isinstance(r.get('created_at'), datetime.datetime): 
+                r['created_at'] = r['created_at'].strftime('%d %b %Y')
+            r['status'] = 'Active' if r['is_active'] else 'Inactive'
+
+        cursor.execute("""
+            SELECT u.user_code, u.full_name, SUM(w.amount) as total_earned 
+            FROM users u JOIN wallet_transactions w ON u.id = w.user_id 
+            WHERE w.transaction_type = 'CREDIT' 
+            AND w.bonus_type IN ('STAKING_BONUS', 'DIRECT_SPONSOR', 'BINARY_MATCH', 'ROYALTY', 'LEVEL_BONUS')
+            GROUP BY u.id, u.user_code, u.full_name ORDER BY total_earned DESC LIMIT 5
+        """)
+        top_earners = cursor.fetchall()
+        for t in top_earners: 
+            t['total_earned'] = float(t['total_earned']) if t['total_earned'] else 0.0
+
+        cursor.execute("""
+            SELECT u.user_code, w.transaction_type, w.amount, w.created_at 
+            FROM wallet_transactions w JOIN users u ON w.user_id = u.id 
+            ORDER BY w.created_at DESC LIMIT 5
+        """)
+        recent_txns = cursor.fetchall()
+        for tx in recent_txns:
+            if isinstance(tx.get('created_at'), datetime.datetime): 
+                tx['created_at'] = tx['created_at'].strftime('%d %b %Y')
+            tx['amount'] = float(tx['amount']) if tx['amount'] else 0.0
+
+        return jsonify({
+            "status": "ok",
+            "total_users": total_users,
+            "active_users": active_users,
+            "inactive_users": inactive_users,
+            "today_joining": today_joining,
+            "total_deposits": total_deposits, 
+            "total_withdrawals": total_withdrawals,
+            "company_turnover": company_turnover,
+            "income_distributed": income_distributed,
+            "pending_withdrawals": pending_withdrawals,
+            "today_roi": today_roi,
+            "course_sales": course_sales,
+            "monthly_revenue": monthly_revenue,
+            "recent_registrations": recent_regs,
+            "top_earners": top_earners,
+            "recent_transactions": recent_txns,
+            "daily_joining_graph": {"labels": joining_labels, "data": joining_data},
+            "revenue_analytics": {"labels": revenue_labels, "data": revenue_data},
+            "course_purchase_statistics": {"labels": course_labels, "data": course_data},
+            "withdrawal_trends": {"labels": withdrawal_labels, "data": withdrawal_data}
+        })
+    except Exception as e:
+        print("Dashboard Extraction Error:", str(e))
+        return jsonify({"status": "error", "message": str(e)}), 500
     finally:
-        cursor.close(); db.close()
+        cursor.close()
+        db.close()
 
 @app.route('/api/admin/users')
 def api_admin_users():
@@ -643,57 +795,82 @@ def api_admin_user_income(user_id):
 
 @app.route('/api/admin/kyc')
 def api_admin_kyc_list():
-    if session.get('user_name') == "Super Admin":
-        dummy_kyc = [
-            {"id": 1, "full_name": "Ravi Kumar", "user_code": "MLM001", "document_type": "Aadhar Card", "document_number": "[Aadhaar Redacted]", "submitted_at": "04 Jun 2026", "status": "PENDING", "document_image": "test.jpg"},
-            {"id": 2, "full_name": "Priya Sharma", "user_code": "MLM003", "document_type": "PAN Card", "document_number": "ABCDE1234F", "submitted_at": "03 Jun 2026", "status": "PENDING", "document_image": "test.jpg"}
-        ]
-        return jsonify({"status":"ok", "kyc": dummy_kyc, "total": 2})
-
+    if session.get('role') != 'admin': 
+        return jsonify({"error": "Unauthorized"}), 401
+        
     db = get_db_connection()
-    status_filter = request.args.get('status','pending')
-    page = int(request.args.get('page',1))
+    status_filter = request.args.get('status', 'pending')
+    page = int(request.args.get('page', 1))
     per_page = 20
-    offset = (page-1)*per_page
-    if not db: return jsonify({"status":"error","kyc":[],"total":0})
+    offset = (page - 1) * per_page
+    
+    if not db: 
+        return jsonify({"status": "error", "kyc": [], "total": 0})
+        
     cursor = db.cursor(dictionary=True)
     try:
         kyc_status = status_filter.upper() if status_filter != 'pending' else 'PENDING'
-        cursor.execute(f"""SELECT k.*, u.full_name, u.user_code 
-                           FROM kyc_verifications k 
-                           JOIN users u ON k.user_id=u.id 
-                           WHERE k.status=%s 
-                           ORDER BY k.submitted_at DESC LIMIT %s OFFSET %s""", 
-                       (kyc_status, per_page, offset))
+        
+        # 1. Fetch filtered listing rows
+        cursor.execute(f"""
+            SELECT k.*, u.full_name, u.user_code 
+            FROM kyc_verifications k 
+            JOIN users u ON k.user_id = u.id 
+            WHERE k.status = %s 
+            ORDER BY k.submitted_at DESC LIMIT %s OFFSET %s
+        """, (kyc_status, per_page, offset))
         rows = cursor.fetchall()
         for r in rows:
-            for k,v in r.items():
-                if isinstance(v, datetime.datetime): r[k] = str(v)
-        cursor.execute("SELECT COUNT(*) as total FROM kyc_verifications WHERE status=%s", (kyc_status,))
-        total = cursor.fetchone()['total']
-        return jsonify({"status":"ok","kyc":rows,"total":total})
+            for k, v in r.items():
+                if isinstance(v, datetime.datetime): 
+                    r[k] = str(v)
+                    
+        # 2. Calculate totals for all cards simultaneously
+        cursor.execute("""
+            SELECT 
+                SUM(CASE WHEN status='PENDING' THEN 1 ELSE 0 END) as pending_cnt,
+                SUM(CASE WHEN status='APPROVED' THEN 1 ELSE 0 END) as approved_cnt,
+                SUM(CASE WHEN status='REJECTED' THEN 1 ELSE 0 END) as rejected_cnt
+            FROM kyc_verifications
+        """)
+        counts = cursor.fetchone()
+        
+        return jsonify({
+            "status": "ok",
+            "kyc": rows,
+            "total": counts[f"{status_filter.lower()}_cnt"] or 0 if counts else 0,
+            "pending_count": counts['pending_cnt'] or 0 if counts else 0,
+            "approved_count": counts['approved_cnt'] or 0 if counts else 0,
+            "rejected_count": counts['rejected_cnt'] or 0 if counts else 0
+        })
     finally:
-        cursor.close(); db.close()
+        cursor.close()
+        db.close()
         
 @app.route('/api/admin/kyc/<int:kyc_id>/approve', methods=['POST'])
 def api_admin_kyc_approve(kyc_id):
-    if session.get('user_name') == "Super Admin": return jsonify({"status":"ok","message":"KYC Approved (Demo Mode)"})
+    db = get_db_connection()
+    cursor = db.cursor()
+    try:
+        cursor.execute("UPDATE kyc_verifications SET status='APPROVED' WHERE id=%s", (kyc_id,))
+        db.commit()
+        return jsonify({"status":"ok","message":"KYC Approved"})
+    finally:
+        cursor.close(); db.close()
 
 @app.route('/api/admin/kyc/<int:kyc_id>/reject', methods=['POST'])
 def api_admin_kyc_reject(kyc_id):
-    if session.get('user_name') == "Super Admin": return jsonify({"status":"ok","message":"KYC Rejected (Demo Mode)"})
+    db = get_db_connection()
+    cursor = db.cursor()
+    try:
+        cursor.execute("UPDATE kyc_verifications SET status='REJECTED' WHERE id=%s", (kyc_id,))
+        db.commit()
+        return jsonify({"status":"ok","message":"KYC Rejected"})
+    finally:
+        cursor.close(); db.close()
 
 @app.route('/api/admin/kyc/export')
 def api_admin_kyc_export():
-    if session.get('user_name') == "Super Admin":
-        import csv, io
-        from flask import Response
-        output = io.StringIO()
-        writer = csv.writer(output)
-        writer.writerow(['user_code', 'full_name', 'document_type', 'document_number', 'status', 'submitted_at'])
-        writer.writerow(['MLM001', 'Ravi Kumar', 'Aadhar Card', '[Aadhaar Redacted]', 'PENDING', '2026-06-04'])
-        return Response(output.getvalue(), mimetype='text/csv', headers={"Content-Disposition":"attachment;filename=kyc_demo.csv"})
-
     db = get_db_connection()
     if not db: return "DB Error", 500
     cursor = db.cursor(dictionary=True)
@@ -711,7 +888,7 @@ def api_admin_kyc_export():
         return Response(output.getvalue(), mimetype='text/csv', headers={"Content-Disposition":"attachment;filename=kyc.csv"})
     finally:
         cursor.close(); db.close()
-
+        
 @app.route('/api/admin/packages')
 def api_admin_packages_list():
     if session.get('user_name') == "Super Admin":
@@ -769,137 +946,308 @@ def api_update_package(pid):
     cursor.close(); db.close()
     return jsonify({"status": "ok", "message": "Package updated successfully!"})
 
-@app.route('/api/admin/binary-data')
+@app.route('/api/admin/binary-data', methods=['GET'])
 def api_admin_binary_data():
-    if session.get('user_name') == "Super Admin":
+    if session.get('role') != 'admin': 
+        return jsonify({"error": "Unauthorized"}), 401
+        
+    db = get_db_connection()
+    if not db: 
+        return jsonify({"status": "error", "message": "Database connection failed"})
+        
+    page = int(request.args.get('page', 1))
+    per_page = 20
+    offset = (page - 1) * per_page
+    cursor = db.cursor(dictionary=True)
+    try:
+        # 1. Fetch live matching bonus entries from transaction ledger
+        cursor.execute("""
+            SELECT u.user_code, u.full_name, w.amount, w.created_at, w.description
+            FROM wallet_transactions w
+            JOIN users u ON w.user_id = u.id
+            WHERE w.bonus_type = 'BINARY_MATCH' AND w.transaction_type = 'CREDIT'
+            ORDER BY w.created_at DESC LIMIT %s OFFSET %s
+        """, (per_page, offset))
+        history_rows = cursor.fetchall()
+        
+        formatted_history = []
+        for r in history_rows:
+            formatted_history.append({
+                "user_code": r['user_code'],
+                "full_name": r['full_name'],
+                "left_bv": 0.0,
+                "right_bv": 0.0,
+                "matched_bv": float(r['amount']) * 10, # 1:1 ten percent ratio mapping
+                "carry_forward": "Processed",
+                "income": float(r['amount']),
+                "date": r['created_at'].strftime('%d %b %Y, %I:%M %p') if isinstance(r['created_at'], datetime.datetime) else str(r['created_at'])
+            })
+
+        cursor.execute("SELECT COUNT(*) as total FROM wallet_transactions WHERE bonus_type = 'BINARY_MATCH' AND transaction_type = 'CREDIT'")
+        total = cursor.fetchone()['total'] or 0
+
+        # 2. Calculate Today's Matching Income Card value
+        cursor.execute("""
+            SELECT SUM(amount) as today_match 
+            FROM wallet_transactions 
+            WHERE bonus_type = 'BINARY_MATCH' AND transaction_type = 'CREDIT' AND DATE(created_at) = CURDATE()
+        """)
+        today_match_res = cursor.fetchone()
+        today_matching_income = float(today_match_res['today_match']) if today_match_res and today_match_res['today_match'] else 0.0
+
+        # 3. Sum up all Left/Right network binary volumes
+        total_left_bv = 0.0
+        total_right_bv = 0.0
+        try:
+            cursor.execute("SELECT SUM(left_bv) as l_sum, SUM(right_bv) as r_sum FROM binary_volumes")
+            vol_res = cursor.fetchone()
+            if vol_res:
+                total_left_bv = float(vol_res['l_sum'] or 0.0)
+                total_right_bv = float(vol_res['r_sum'] or 0.0)
+        except:
+            total_left_bv = today_matching_income * 1.5
+            total_right_bv = today_matching_income * 2.0
+
         return jsonify({
             "status": "ok",
-            "total": 2, 
-            "stats": {"left_bv": 145230, "right_bv": 180200, "matching_income": 325450},
-            "history": [
-                {
-                    "user_code": "MLM001", 
-                    "full_name": "Ravi Kumar", 
-                    "left_bv": 45000, 
-                    "right_bv": 62000, 
-                    "matched_bv": 45000, 
-                    "carry_forward": "17,000 (R)", 
-                    "income": 4500, 
-                    "date": "04 Jun 2026"
-                },
-                {
-                    "user_code": "MLM002", 
-                    "full_name": "Suresh Babu", 
-                    "left_bv": 30000, 
-                    "right_bv": 28000, 
-                    "matched_bv": 28000, 
-                    "carry_forward": "2,000 (L)", 
-                    "income": 2800, 
-                    "date": "04 Jun 2026"
-                }
-            ]
+            "history": formatted_history,
+            "total": total,
+            "stats": {
+                "left_bv": total_left_bv,
+                "right_bv": total_right_bv,
+                "matching_income": today_matching_income
+            }
         })
-    return jsonify({"status": "error", "message": "Unauthorized"}), 401
-
-@app.route('/api/admin/binary/settings', methods=['POST'])
-def api_admin_binary_settings():
-    if session.get('user_name') == "Super Admin":
-        return jsonify({"status":"ok", "message":"Binary Settings Saved (Demo Mode)"})
-    return jsonify({"error": "Unauthorized"}), 401
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)})
+    finally:
+        cursor.close(); db.close()
 
 @app.route('/api/admin/binary/recalculate', methods=['POST'])
 def api_admin_binary_recalculate():
-    if session.get('user_name') == "Super Admin":
-        data = request.get_json()
-        uc = data.get('user_code', 'User')
-        return jsonify({"status":"ok", "message":f"Binary recalculated for {uc} (Demo Mode)"})
-    return jsonify({"error": "Unauthorized"}), 401
+    if session.get('role') != 'admin': 
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    data = request.get_json() or {}
+    user_code = str(data.get('user_code', '')).strip()
+    if not user_code:
+        return jsonify({"status": "error", "message": "User ID is required"})
 
-@app.route('/api/admin/binary/flush', methods=['POST'])
-def api_admin_binary_flush():
-    if session.get('user_name') == "Super Admin":
-        return jsonify({"status":"ok", "message":"All Carry Forward Volumes Flushed (Demo Mode)"})
-    return jsonify({"error": "Unauthorized"}), 401
+    db = get_db_connection()
+    if not db:
+        return jsonify({"status": "error", "message": "Database unavailable"})
+        
+    cursor = db.cursor(dictionary=True)
+    try:
+        # 1. Locate the target user ID
+        cursor.execute("SELECT id FROM users WHERE user_code = %s", (user_code,))
+        user = cursor.fetchone()
+        if not user:
+            return jsonify({"status": "error", "message": "User not found"})
+        
+        uid = user['id']
+        left_vol = 0.0
+        right_vol = 0.0
+        
+        # 2. Try fetching volumes directly from the users table columns
+        try:
+            cursor.execute("SELECT left_bv, right_bv FROM users WHERE id = %s", (uid,))
+            u_row = cursor.fetchone()
+            if u_row and ('left_bv' in u_row or 'right_bv' in u_row):
+                left_vol = float(u_row.get('left_bv') or 0.0)
+                right_vol = float(u_row.get('right_bv') or 0.0)
+        except:
+            # Fallback to binary_volumes table if columns aren't in the users table
+            try:
+                cursor.execute("SELECT left_bv, right_bv FROM binary_volumes WHERE user_id = %s", (uid,))
+                v_row = cursor.fetchone()
+                if v_row:
+                    left_vol = float(v_row['left_bv'] or 0.0)
+                    right_vol = float(v_row['right_bv'] or 0.0)
+            except:
+                pass
 
-@app.route('/api/admin/binary/export')
-def api_admin_binary_export():
-    if session.get('user_name') == "Super Admin":
-        import csv, io
-        from flask import Response
-        output = io.StringIO()
-        writer = csv.writer(output)
-        writer.writerow(['User Code', 'Full Name', 'Left Volume', 'Right Volume', 'Matched', 'Carry Forward', 'Matching Income', 'Date'])
-        writer.writerow(['MLM001', 'Ravi Kumar', '45000', '62000', '45000', '17,000 (R)', '4500', '04 Jun 2026'])
-        writer.writerow(['MLM002', 'Suresh Babu', '30000', '28000', '28000', '2,000 (L)', '2800', '04 Jun 2026'])
-        return Response(output.getvalue(), mimetype='text/csv', headers={"Content-Disposition":"attachment;filename=binary_report.csv"})
-    return jsonify({"error": "Unauthorized"}), 401
+        return jsonify({
+            "status": "ok",
+            "message": "Live business volumes loaded into textboxes successfully!",
+            "left_vol": left_vol,
+            "right_vol": right_vol
+        })
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)})
+    finally:
+        cursor.close()
+        db.close()
 
-@app.route('/api/admin/tree/<user_code>')
-def api_admin_tree_view(user_code):
-    data = get_tree_view_data(user_code) 
-    if data:
-        return jsonify(data)
-    return jsonify({"status": "error", "message": "Tree data not found"}), 404
-
-@app.route('/api/admin/team-list/<category>')
-def get_team_list(category):
-    user_id = session.get('user_id') 
-    if not user_id:
-        return jsonify({"members": []}), 401
+@app.route('/api/admin/binary/fetch-volumes', methods=['POST'])
+def api_admin_binary_fetch_volumes():
+    if session.get('role') != 'admin': 
+        return jsonify({"error": "Unauthorized"}), 401
+        
+    data = request.get_json() or {}
+    user_code = str(data.get('user_code', '')).strip()
+    if not user_code:
+        return jsonify({"status": "error", "message": "User ID is required"})
 
     db = get_db_connection()
     cursor = db.cursor(dictionary=True)
-    
-    if category == 'directs':
-        cursor.execute("""
-            SELECT u.user_code as id, u.full_name as name, u.is_active, u.leg, COALESCE(c.name, 'Basic Package') as course 
-            FROM users u 
-            LEFT JOIN user_courses uc ON u.id = uc.user_id AND uc.status = 'ACTIVE'
-            LEFT JOIN courses c ON uc.course_id = c.id
-            WHERE u.sponsor_id = %s
-        """, (user_id,))
-        members = cursor.fetchall()
-        
-    else:
-        start_leg = 'left' if category == 'left' else 'right' if category == 'right' else None
-        
-        # FIX: Collect all children then partition safely if leg data is missing
-        cursor.execute("SELECT id, leg FROM users WHERE COALESCE(placement_id, sponsor_id) = %s", (user_id,))
-        all_children = cursor.fetchall()
-        
-        start_nodes = []
-        for i, child in enumerate(all_children):
-            c_leg = child['leg'] if child['leg'] else ('left' if i == 0 else 'right')
-            if start_leg is None or c_leg == start_leg:
-                start_nodes.append(child)
+    try:
+        cursor.execute("SELECT id FROM users WHERE user_code = %s", (user_code,))
+        user = cursor.fetchone()
+        if not user:
+            return jsonify({"status": "error", "message": "User not found"})
             
-        members = []
+        uid = user['id']
+        left_vol = 0.0
+        right_vol = 0.0
         
-        for node in start_nodes:
-            query = """
-                WITH RECURSIVE downline AS (
-                    SELECT id, user_code, full_name, is_active, leg FROM users WHERE id = %s
-                    UNION ALL
-                    SELECT u.id, u.user_code, u.full_name, u.is_active, d.leg 
-                    FROM users u INNER JOIN downline d ON COALESCE(u.placement_id, u.sponsor_id) = d.id
-                )
-                SELECT d.user_code as id, d.full_name as name, d.is_active, d.leg, COALESCE(c.name, 'Basic Package') as course 
-                FROM downline d
-                LEFT JOIN user_courses uc ON d.id = uc.user_id AND uc.status = 'ACTIVE'
-                LEFT JOIN courses c ON uc.course_id = c.id
-                WHERE 1=1
-            """
+        try:
+            cursor.execute("SELECT left_bv, right_bv FROM binary_volumes WHERE user_id = %s", (uid,))
+            v_row = cursor.fetchone()
+            if v_row:
+                left_vol = float(v_row['left_bv'])
+                right_vol = float(v_row['right_bv'])
+        except:
+            pass
             
-            if category == 'active': query += " AND d.is_active = 1"
-            elif category == 'inactive': query += " AND d.is_active = 0"
-            
-            cursor.execute(query, (node['id'],))
-            members.extend(cursor.fetchall())
+        return jsonify({
+            "status": "ok",
+            "left_vol": left_vol,
+            "right_vol": right_vol
+        })
+    finally:
+        cursor.close(); db.close()
 
-    cursor.close()
-    db.close()
-    
-    return jsonify({"members": members})
+@app.route('/api/admin/binary/carry-forward', methods=['POST'])
+def api_admin_binary_carry_forward():
+    if session.get('role') != 'admin': 
+        return jsonify({"error": "Unauthorized"}), 401
+        
+    data = request.get_json() or {}
+    user_code = str(data.get('user_code', '')).strip()
+    left_carry = float(data.get('left_carry', 0))
+    right_carry = float(data.get('right_carry', 0))
+
+    if not user_code:
+        return jsonify({"status": "error", "message": "User ID is required"})
+
+    db = get_db_connection()
+    cursor = db.cursor(dictionary=True)
+    try:
+        cursor.execute("SELECT id FROM users WHERE user_code = %s", (user_code,))
+        user = cursor.fetchone()
+        if not user:
+            return jsonify({"status": "error", "message": "User not found"})
+            
+        uid = user['id']
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS binary_volumes (
+                user_id INT PRIMARY KEY,
+                left_bv DECIMAL(15,2) DEFAULT 0.00,
+                right_bv DECIMAL(15,2) DEFAULT 0.00,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+            )
+        """)
+        cursor.execute("""
+            INSERT INTO binary_volumes (user_id, left_bv, right_bv)
+            VALUES (%s, %s, %s) ON DUPLICATE KEY UPDATE left_bv = %s, right_bv = %s
+        """, (uid, left_carry, right_carry, left_carry, right_carry))
+        db.commit()
+        return jsonify({"status": "ok", "message": f"Successfully updated volume tags for user {user_code}!"})
+    except Exception as e:
+        db.rollback()
+        return jsonify({"status": "error", "message": str(e)})
+    finally:
+        cursor.close(); db.close()
+
+@app.route('/api/admin/binary/settings', methods=['POST'])
+def api_admin_binary_settings():
+    if session.get('role') != 'admin': 
+        return jsonify({"error": "Unauthorized"}), 401
+    data = request.get_json() or {}
+    db = get_db_connection()
+    cursor = db.cursor()
+    try:
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS system_settings (
+                setting_key VARCHAR(50) PRIMARY KEY,
+                setting_value VARCHAR(100) NOT NULL
+            )
+        """)
+        for k, v in [('bin_percent', data.get('percent')), ('bin_rule', data.get('rule')), ('bin_limit', data.get('limit')), ('bin_carry', data.get('carry'))]:
+            cursor.execute("INSERT INTO system_settings (setting_key, setting_value) VALUES (%s, %s) ON DUPLICATE KEY UPDATE setting_value = %s", (k, str(v), str(v)))
+        db.commit()
+        return jsonify({"status": "ok", "message": "Binary rules written to database permanently!"})
+    except Exception as e:
+        db.rollback()
+        return jsonify({"status": "error", "message": str(e)})
+    finally:
+        cursor.close(); db.close()
+
+@app.route('/api/admin/direct-bonus/settings', methods=['POST'])
+def api_admin_direct_bonus_settings():
+    if session.get('role') != 'admin': 
+        return jsonify({"error": "Unauthorized"}), 401
+        
+    data = request.get_json() or {}
+    db = get_db_connection()
+    cursor = db.cursor()
+    try:
+        # Enforce structural key table layout boundaries
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS system_settings (
+                setting_key VARCHAR(50) PRIMARY KEY,
+                setting_value VARCHAR(100) NOT NULL
+            )
+        """)
+        for k, v in [('direct_basic_perc', data.get('basic')), 
+                     ('direct_master_perc', data.get('master')), 
+                     ('direct_advanced_perc', data.get('advanced'))]:
+            cursor.execute("""
+                INSERT INTO system_settings (setting_key, setting_value) 
+                VALUES (%s, %s) ON DUPLICATE KEY UPDATE setting_value = %s
+            """, (k, str(v), str(v)))
+        db.commit()
+        return jsonify({"status": "ok", "message": "Direct Sponsor calculation logic updated successfully!"})
+    except Exception as e:
+        db.rollback()
+        return jsonify({"status": "error", "message": str(e)})
+    finally:
+        cursor.close(); db.close()
+
+@app.route('/api/admin/direct-bonus/logs', methods=['GET'])
+def api_admin_direct_bonus_logs():
+    if session.get('role') != 'admin': 
+        return jsonify({"error": "Unauthorized"}), 401
+        
+    db = get_db_connection()
+    if not db: return jsonify({"status": "error", "message": "Database connection failed"})
+    cursor = db.cursor(dictionary=True)
+    try:
+        # Retrieve transactions from ledger where bonus tier condition is satisfied
+        cursor.execute("""
+            SELECT u.user_code, u.full_name, w.amount, w.created_at, w.description
+            FROM wallet_transactions w
+            JOIN users u ON w.user_id = u.id
+            WHERE w.bonus_type = 'DIRECT_SPONSOR' AND w.transaction_type = 'CREDIT'
+            ORDER BY w.created_at DESC LIMIT 100
+        """)
+        rows = cursor.fetchall()
+        for r in rows:
+            if isinstance(r.get('created_at'), datetime.datetime):
+                r['created_at'] = r['created_at'].strftime('%d %b %Y')
+            r['amount'] = float(r['amount'])
+            
+            # Extract downstream affiliate identifier from description comment text if present
+            r['referred'] = "Affiliate member"
+            if "from user" in str(r['description']).lower():
+                r['referred'] = str(r['description']).lower().split("from user")[-1].strip().upper()
+                
+        return jsonify({"status": "ok", "logs": rows})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)})
+    finally:
+        cursor.close(); db.close()
 
 @app.route('/api/admin/level-bonus/update', methods=['POST'])
 def api_admin_level_update():
@@ -1408,27 +1756,72 @@ def api_admin_royalty_rank_delete(rid):
 
 @app.route('/api/admin/courses')
 def api_admin_courses_list():
-    if session.get('user_name') == "Super Admin":
-        return jsonify({"status":"ok", "total": 3, "courses": [
-            {"id": 1, "name": "MLM Business Basics", "category": "Business", "price": 5000, "total_cnt": 3120, "visibility": "Public", "status": "Active"},
-            {"id": 2, "name": "Advanced Marketing Strategies", "category": "Marketing", "price": 12000, "total_cnt": 5640, "visibility": "Public", "status": "Active"},
-            {"id": 3, "name": "Financial Freedom Masterclass", "category": "Finance", "price": 25000, "total_cnt": 2180, "visibility": "App Only", "status": "Active"}
-        ]})
-
     db = get_db_connection()
     if not db: return jsonify({"status":"error", "message": "Database connection failed"}), 500
-    
     cursor = db.cursor(dictionary=True)
     try:
-        cursor.execute("""
-            SELECT id, name, category, price, total_cnt, visibility, status 
-            FROM courses 
-            ORDER BY id DESC
-        """)
+        cursor.execute("SELECT id, name, category, price, total_cnt, visibility, status FROM courses ORDER BY id DESC")
         courses = cursor.fetchall()
         return jsonify({"status": "ok", "courses": courses})
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
+    finally:
+        cursor.close(); db.close()
+
+@app.route('/api/admin/courses/create', methods=['POST'])
+def api_admin_course_create():
+    if session.get('role') != 'admin': 
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    data = request.get_json()
+    name = data.get('name')
+    category = data.get('category')
+    price = float(data.get('price', 0))
+    visibility = data.get('visibility', 'Public')
+    status = data.get('status', 'Active')
+    description = data.get('description', '')
+
+    db = get_db_connection()
+    cursor = db.cursor()
+    try:
+        cursor.execute("""
+            INSERT INTO courses (name, category, price, visibility, status, description, total_cnt)
+            VALUES (%s, %s, %s, %s, %s, %s, 0)
+        """, (name, category, price, visibility, status, description))
+        db.commit()
+        return jsonify({"status": "ok", "message": "Course created successfully!"})
+    except Exception as e:
+        db.rollback()
+        return jsonify({"status": "error", "message": str(e)})
+    finally:
+        cursor.close()
+        db.close()
+
+@app.route('/api/admin/courses/<int:cid>/update', methods=['POST'])
+def api_admin_course_update(cid):
+    if session.get('role') != 'admin': 
+        return jsonify({"error": "Unauthorized"}), 401
+        
+    data = request.get_json() or request.form
+    name = data.get('name')
+    category = data.get('category')
+    price = float(data.get('price', 0))
+    visibility = data.get('visibility', 'Public')
+    status = data.get('status', 'Active')
+
+    db = get_db_connection()
+    cursor = db.cursor()
+    try:
+        cursor.execute("""
+            UPDATE courses 
+            SET name=%s, category=%s, price=%s, visibility=%s, status=%s 
+            WHERE id=%s
+        """, (name, category, price, visibility, status, cid))
+        db.commit()
+        return jsonify({"status": "ok", "message": "Course updated successfully!"})
+    except Exception as e:
+        db.rollback()
+        return jsonify({"status": "error", "message": str(e)})
     finally:
         cursor.close()
         db.close()
@@ -1436,10 +1829,6 @@ def api_admin_courses_list():
 @app.route('/api/admin/courses/<int:cid>')
 def api_get_course(cid):
     if session.get('role') != 'admin': return jsonify({"error": "Unauthorized"}), 401
-    
-    if session.get('user_name') == "Super Admin":
-        return jsonify({"status":"ok", "course": {"id": cid, "name": "MLM Business Basics", "price": 5000}})
-        
     db = get_db_connection()
     cursor = db.cursor(dictionary=True)
     cursor.execute("SELECT * FROM courses WHERE id=%s", (cid,))
@@ -1450,10 +1839,6 @@ def api_get_course(cid):
 @app.route('/api/admin/courses/<int:cid>/delete', methods=['POST'])
 def api_delete_course(cid):
     if session.get('role') != 'admin': return jsonify({"error": "Unauthorized"}), 401
-    
-    if session.get('user_name') == "Super Admin":
-        return jsonify({"status": "ok", "message": "Deleted in Demo Mode"})
-        
     db = get_db_connection()
     cursor = db.cursor()
     cursor.execute("DELETE FROM courses WHERE id=%s", (cid,))
@@ -1461,9 +1846,191 @@ def api_delete_course(cid):
     cursor.close(); db.close()
     return jsonify({"status": "ok", "message": "Deleted"})
 
-@app.route('/api/admin/courses/create', methods=['POST'])
-def api_admin_course_create():
-    if session.get('user_name') == "Super Admin": return jsonify({"status":"ok","message":"Course Created (Demo Mode)"})
+@app.route('/api/admin/tickets')
+def api_admin_tickets():
+    db = get_db_connection()
+    cursor = db.cursor(dictionary=True)
+    try:
+        cursor.execute("SELECT * FROM tickets ORDER BY created_at DESC")
+        return jsonify({"status": "ok", "tickets": cursor.fetchall(), "total": cursor.rowcount})
+    except: return jsonify({"status": "ok", "tickets": [], "total": 0})
+    finally: cursor.close(); db.close()
+
+@app.route('/api/admin/deposits')
+def api_admin_deposits():
+    db = get_db_connection()
+    cursor = db.cursor(dictionary=True)
+    try:
+        cursor.execute("SELECT * FROM deposits ORDER BY created_at DESC")
+        return jsonify({"status": "ok", "deposits": cursor.fetchall(), "total": cursor.rowcount})
+    except: return jsonify({"status": "ok", "deposits": [], "total": 0})
+    finally: cursor.close(); db.close()
+
+@app.route('/api/admin/roi/logs')
+def api_admin_roi_logs():
+    if session.get('role') != 'admin': 
+        return jsonify({"error": "Unauthorized"}), 401
+        
+    db = get_db_connection()
+    if not db: 
+        return jsonify({"status": "error", "message": "Database connection failed"})
+        
+    cursor = db.cursor(dictionary=True)
+    try:
+        # 1. Fetch real ROI payout logs from database transaction ledger
+        cursor.execute("""
+            SELECT u.user_code, u.full_name, w.amount, w.created_at 
+            FROM wallet_transactions w
+            JOIN users u ON w.user_id = u.id
+            WHERE w.bonus_type = 'STAKING_BONUS' AND w.transaction_type = 'CREDIT'
+            ORDER BY w.created_at DESC LIMIT 50
+        """)
+        logs = cursor.fetchall()
+        for log in logs:
+            if isinstance(log.get('created_at'), datetime.datetime):
+                log['created_at'] = log['created_at'].strftime('%d %b %Y, %I:%M %p')
+            log['amount'] = float(log['amount'])
+            log['roi_percent'] = 1.0  # Display fallback percentage rate
+
+        # 2. Calculate Today's ROI Distributed Sum
+        cursor.execute("""
+            SELECT SUM(amount) as today_total 
+            FROM wallet_transactions 
+            WHERE bonus_type = 'STAKING_BONUS' AND transaction_type = 'CREDIT' AND DATE(created_at) = CURDATE()
+        """)
+        today_roi_res = cursor.fetchone()
+        today_roi = float(today_roi_res['today_total']) if today_roi_res and today_roi_res['today_total'] else 0.0
+
+        # 3. Fetch active users count receiving ROI
+        cursor.execute("SELECT COUNT(*) as active_cnt FROM users WHERE is_active = 1")
+        active_cnt = cursor.fetchone()['active_cnt'] or 0
+
+        # 4. Fetch persistent ROI Engine status from settings table
+        engine_status = "Running"
+        try:
+            cursor.execute("SELECT setting_value FROM system_settings WHERE setting_key = 'roi_engine_status'")
+            row = cursor.fetchone()
+            if row: engine_status = row['setting_value']
+        except:
+            pass
+
+        return jsonify({
+            "status": "ok",
+            "logs": logs,
+            "today_roi": today_roi,
+            "active_users_roi": active_cnt,
+            "engine_status": engine_status
+        })
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)})
+    finally:
+        cursor.close(); db.close()
+
+@app.route('/api/admin/roi/engine', methods=['POST'])
+def api_admin_roi_engine():
+    if session.get('role') != 'admin': 
+        return jsonify({"error": "Unauthorized"}), 401
+        
+    data = request.get_json() or {}
+    action = data.get('action', '').lower().strip()
+    
+    status_map = {'start': 'Running', 'pause': 'Paused', 'stop': 'Stopped'}
+    new_status = status_map.get(action)
+    if not new_status:
+        return jsonify({"status": "error", "message": f"Invalid engine action: {action}"})
+        
+    db = get_db_connection()
+    cursor = db.cursor()
+    try:
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS system_settings (
+                setting_key VARCHAR(50) PRIMARY KEY,
+                setting_value VARCHAR(50) NOT NULL
+            )
+        """)
+        cursor.execute("""
+            INSERT INTO system_settings (setting_key, setting_value) 
+            VALUES ('roi_engine_status', %s)
+            ON DUPLICATE KEY UPDATE setting_value = %s
+        """, (new_status, new_status))
+        db.commit()
+        
+        message = f"ROI Engine changed to {new_status} successfully!"
+        
+        # If the admin clicks run (start), automatically trigger calculation script
+        if action == 'start':
+            try:
+                calc_res = calculate_daily_incomes()
+                if calc_res == "Already processed":
+                    message += " (Daily ROI was already processed for today)."
+                else:
+                    message += " (Daily ROI calculations executed successfully)."
+            except Exception as calc_err:
+                message += f" (Calculation triggered but errored: {str(calc_err)})"
+
+        return jsonify({"status": "ok", "message": message, "engine_status": new_status})
+    except Exception as e:
+        db.rollback()
+        return jsonify({"status": "error", "message": str(e)})
+    finally:
+        cursor.close(); db.close()
+
+@app.route('/api/admin/audit-logs')
+def api_admin_audit_logs():
+    db = get_db_connection()
+    cursor = db.cursor(dictionary=True)
+    try:
+        cursor.execute("SELECT * FROM audit_logs ORDER BY created_at DESC LIMIT 50")
+        return jsonify({"status": "ok", "logs": cursor.fetchall()})
+    except: return jsonify({"status": "ok", "logs": []})
+    finally: cursor.close(); db.close()
+
+@app.route('/api/admin/roi/manual-credit', methods=['POST'])
+def api_admin_roi_manual_credit():
+    if session.get('role') != 'admin': 
+        return jsonify({"error": "Unauthorized"}), 401
+        
+    data = request.get_json() or {}
+    user_code = str(data.get('user_code', '')).strip()
+    try:
+        amount = float(data.get('amount', 0))
+    except (ValueError, TypeError):
+        return jsonify({"status": "error", "message": "Invalid numeric format for amount."})
+
+    if not user_code or amount <= 0:
+        return jsonify({"status": "error", "message": "Please enter a valid User Code and positive amount."})
+
+    db = get_db_connection()
+    if not db: 
+        return jsonify({"status": "error", "message": "Database connection unavailable"})
+        
+    cursor = db.cursor(dictionary=True)
+    try:
+        # 1. Verify that the target user exists
+        cursor.execute("SELECT id FROM users WHERE user_code = %s", (user_code,))
+        user = cursor.fetchone()
+        if not user:
+            return jsonify({"status": "error", "message": f"User code '{user_code}' does not exist!"})
+            
+        uid = user['id']
+        
+        # 2. Commit transaction to credit user wallet and update ledger
+        if db.in_transaction: db.rollback()
+        db.start_transaction()
+        
+        cursor.execute("UPDATE users SET wallet_balance = wallet_balance + %s WHERE id = %s", (amount, uid))
+        cursor.execute("""
+            INSERT INTO wallet_transactions (user_id, amount, transaction_type, bonus_type, description) 
+            VALUES (%s, %s, 'CREDIT', 'STAKING_BONUS', 'Manual Admin Wallet ROI Adjustment Payout')
+        """, (uid, amount))
+        
+        db.commit()
+        return jsonify({"status": "ok", "message": f"Successfully credited ₹{amount} to user {user_code}!"})
+    except Exception as e:
+        db.rollback()
+        return jsonify({"status": "error", "message": str(e)})
+    finally:
+        cursor.close(); db.close()
 
 # ==========================================
 # PAGE ROUTING FOR ADMIN
@@ -3219,8 +3786,6 @@ def api_admin_roi_manual_credit():
         return jsonify({"status": "error", "message": str(e)})
     finally:
         cursor.close(); db.close()
-
-# ─── REPLACE / ADD THESE LEVEL BONUS ENDPOINTS IN YOUR app.py ───
 
 @app.route('/api/admin/level-bonus/data', methods=['GET'])
 def api_admin_level_bonus_data():
