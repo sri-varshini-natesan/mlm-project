@@ -48,6 +48,7 @@ def calculate_daily_incomes():
         if db.in_transaction: db.rollback() 
         db.start_transaction()
 
+        # 1. DAILY ROI: Updated to JOIN with courses table
         cursor.execute("""
             SELECT uc.user_id, c.name as course_name, c.roi_percent as roi_percentage, c.price as course_price 
             FROM user_courses uc
@@ -69,6 +70,7 @@ def calculate_daily_incomes():
                     VALUES (%s, %s, 'CREDIT', 'STAKING_BONUS', %s)
                 """, (uid, roi_amount, f"Daily ROI for {pkg['course_name']}"))
 
+        # 2. BINARY MATCH: Updated to use left_volume and right_volume instead of carry
         cursor.execute("""
             SELECT id, left_volume, right_volume 
             FROM users 
@@ -161,54 +163,59 @@ def find_user_by_user_code(user_code):
         return cursor.fetchone()
     finally:
         cursor.close()
-        db.close()  
+        db.close()
 
 def get_team_stats(user_id):
     db = get_db_connection()
     if not db: return None
     cursor = db.cursor(dictionary=True)
     try:
-        # 1. Direct Referrals
+        # 1. Direct Referrals (Using sponsor_id)
         cursor.execute("SELECT COUNT(*) as directs FROM users WHERE sponsor_id = %s", (user_id,))
         directs = cursor.fetchone()['directs']
 
-        # 2. Get children
-        cursor.execute("SELECT id, leg FROM users WHERE COALESCE(placement_id, sponsor_id) = %s", (user_id,))
+        # 2. Get both Left and Right nodes in a single, safe query execution
+        cursor.execute("SELECT id, leg FROM users WHERE placement_id = %s AND leg IN ('left', 'right')", (user_id,))
         children = cursor.fetchall()
         
-        legs = {'left': [], 'right': []}
-        for i, child in enumerate(children):
-            c_leg = str(child['leg']).lower() if child['leg'] else ('left' if i == 0 else 'right')
-            if c_leg in legs:
-                legs[c_leg].append(child['id'])
+        left_child_id = None
+        right_child_id = None
+        
+        for child in children:
+            if child['leg'] == 'left':
+                left_child_id = child['id']
+            elif child['leg'] == 'right':
+                right_child_id = child['id']
 
-        # 3. Recursive counter
-        def count_downline_list(child_ids):
-            if not child_ids: return {"total": 0, "active": 0, "inactive": 0}
+        # 3. Dedicated internal function to consume and close tracking data sequentially
+        def count_downline(start_id):
+            if not start_id: return {"total": 0, "active": 0, "inactive": 0}
             
-            placeholders = ','.join(['%s'] * len(child_ids))
-            # Fixed query: counts children only (using total-1 to exclude root)
-            query = f"""
+            query = """
                 WITH RECURSIVE downline AS (
-                    SELECT id, is_active FROM users WHERE id IN ({placeholders})
+                    SELECT id, is_active FROM users WHERE id = %s
                     UNION ALL
-                    SELECT u.id, u.is_active 
-                    FROM users u 
-                    INNER JOIN downline d ON COALESCE(u.placement_id, u.sponsor_id) = d.id
+                    SELECT u.id, u.is_active FROM users u INNER JOIN downline d ON u.placement_id = d.id
                 )
                 SELECT COUNT(*) as total, 
                        SUM(CASE WHEN is_active=1 THEN 1 ELSE 0 END) as active, 
                        SUM(CASE WHEN is_active=0 THEN 1 ELSE 0 END) as inactive 
                 FROM downline;
             """
+            # Using a temporary clean cursor to avoid cross-contamination of unread results
             sub_cursor = db.cursor(dictionary=True)
-            sub_cursor.execute(query, tuple(child_ids))
+            sub_cursor.execute(query, (start_id,))
             res = sub_cursor.fetchone()
             sub_cursor.close()
-            return {"total": int(res['total'] or 0), "active": int(res['active'] or 0), "inactive": int(res['inactive'] or 0)}
+            
+            return {
+                "total": int(res['total'] or 0), 
+                "active": int(res['active'] or 0), 
+                "inactive": int(res['inactive'] or 0)
+            }
 
-        left_stats = count_downline_list(legs['left'])
-        right_stats = count_downline_list(legs['right'])
+        left_stats = count_downline(left_child_id)
+        right_stats = count_downline(right_child_id)
 
         return {
             "direct_referrals": directs,
@@ -229,12 +236,14 @@ def get_financial_stats(user_id):
     
     cursor = db.cursor(dictionary=True)
     try:
+        # 1. Get Total Income & Withdrawals
         cursor.execute("SELECT SUM(amount) as total FROM wallet_transactions WHERE user_id = %s AND transaction_type = 'CREDIT'", (user_id,))
         total_income = float(cursor.fetchone()['total'] or 0.00)
 
         cursor.execute("SELECT SUM(request_amount) as total FROM withdrawals WHERE user_id = %s AND status IN ('APPROVED', 'PENDING')", (user_id,))
         total_withdraw = float(cursor.fetchone()['total'] or 0.00)
 
+        # 2. Automatically sum up ALL different bonus types!
         cursor.execute("""
             SELECT bonus_type, SUM(amount) as total_bonus 
             FROM wallet_transactions 
@@ -243,6 +252,7 @@ def get_financial_stats(user_id):
         """, (user_id,))
         bonuses = cursor.fetchall()
 
+        # Initialize the dictionary with zeros
         stats = {
             "total_income": round(total_income, 2),
             "total_withdrawal": round(total_withdraw, 2),
@@ -255,6 +265,7 @@ def get_financial_stats(user_id):
             "royalty_bonus": 0.00
         }
 
+        # Dynamically fill in the actual money earned!
         for b in bonuses:
             b_type = b['bonus_type']
             amt = float(b['total_bonus'] or 0.00)
@@ -279,9 +290,9 @@ def get_tree_view_data(user_code):
         return "https://cdn-icons-png.flaticon.com/512/149/149071.png"
 
     try:
-        # FIX: Added COALESCE for course_name so it doesn't fail on null course_id
+        # Added JOIN to courses table
         cursor.execute("""
-            SELECT u.id, u.user_code, u.full_name, u.is_active, u.profile_img, u.created_at, COALESCE(c.name, 'Basic Package') as course_name 
+            SELECT u.id, u.user_code, u.full_name, u.is_active, u.profile_img, u.created_at, c.name as course_name 
             FROM users u
             LEFT JOIN user_courses uc ON u.id = uc.user_id AND uc.status = 'ACTIVE'
             LEFT JOIN courses c ON uc.course_id = c.id
@@ -292,19 +303,15 @@ def get_tree_view_data(user_code):
         if not root_user: return None
 
         def build_node(user_record):
-            # FIX: Fallback to sponsor_id if placement_id is empty
+            # Added JOIN to courses table for downlines
             cursor.execute("""
-                SELECT u.id, u.user_code, u.full_name, u.is_active, u.leg, u.profile_img, u.created_at, COALESCE(c.name, 'Basic Package') as course_name 
+                SELECT u.id, u.user_code, u.full_name, u.is_active, u.leg, u.profile_img, u.created_at, c.name as course_name 
                 FROM users u
                 LEFT JOIN user_courses uc ON u.id = uc.user_id AND uc.status = 'ACTIVE'
                 LEFT JOIN courses c ON uc.course_id = c.id
-                WHERE COALESCE(u.placement_id, u.sponsor_id) = %s
+                WHERE u.placement_id = %s
             """, (user_record['id'],))
             children_records = cursor.fetchall()
-            
-            # Safe date parsing
-            dt = user_record.get('created_at')
-            join_date = dt.strftime("%d %b %Y") if isinstance(dt, datetime.datetime) else str(dt)[:10] if dt else "N/A"
 
             node_data = {
                 "id": user_record['user_code'],
@@ -312,16 +319,15 @@ def get_tree_view_data(user_code):
                 "active": user_record['is_active'],
                 "image": get_img_url(user_record['profile_img']),
                 "course": user_record.get('course_name') or "Not Enrolled",
-                "join_date": join_date,
+                "join_date": user_record['created_at'].strftime("%d %b %Y") if user_record.get('created_at') else "N/A",
                 "children": { "left": None, "right": None }
             }
 
-            # FIX: Auto-assign left/right if leg is null
-            for i, child in enumerate(children_records):
-                position = child['leg'].lower() if child['leg'] else ('left' if i == 0 else 'right')
-                if position == 'left' and node_data["children"]["left"] is None:
+            for child in children_records:
+                position = child['leg'].lower() if child['leg'] else ''
+                if position == 'left':
                     node_data["children"]["left"] = build_node(child)
-                elif position == 'right' and node_data["children"]["right"] is None:
+                elif position == 'right':
                     node_data["children"]["right"] = build_node(child)
 
             return node_data
@@ -372,6 +378,7 @@ def process_course_purchase(user_id, course_id):
     cursor = db.cursor(dictionary=True)
     
     try:
+        # 1. Fetch course details directly from courses
         cursor.execute("SELECT id, name, price, duration_days FROM courses WHERE id = %s", (course_id,))
         course = cursor.fetchone()
         if not course: return {"status": "error", "message": "Invalid course selection."}
@@ -387,7 +394,7 @@ def process_course_purchase(user_id, course_id):
             return {"status": "error", "message": f"Insufficient funds. Course costs ₹{course_price}."}
 
         if db.in_transaction: 
-            db.rollback()
+            db.rollback() # Clear any stuck transactions first!
         db.start_transaction()
 
         cursor.execute("UPDATE users SET wallet_balance = wallet_balance - %s, is_active = 1 WHERE id = %s", (course_price, user_id))
@@ -397,6 +404,7 @@ def process_course_purchase(user_id, course_id):
             VALUES (%s, %s, 'DEBIT', 'COURSE_PURCHASE', %s)
         """, (user_id, course_price, f"Purchased {course_name}"))
 
+        # 2. Give the Course (LEAN SCHEMA: using expires_at)
         cursor.execute("""
             INSERT INTO user_courses (user_id, course_id, status, created_at, expires_at) 
             VALUES (%s, %s, 'ACTIVE', NOW(), DATE_ADD(NOW(), INTERVAL %s DAY))
@@ -410,6 +418,7 @@ def process_course_purchase(user_id, course_id):
                 VALUES (%s, %s, 'CREDIT', 'DIRECT_SPONSOR', %s)
             """, (user['sponsor_id'], sponsor_bonus, f"Direct Referral Bonus for {course_name}"))
 
+        # 3. BINARY VOLUME ROLL-UP ENGINE (Removed redundant left_carry/right_carry)
         current_upline_id = user['sponsor_id']
         current_leg = user['leg']
         
@@ -457,26 +466,36 @@ def register_new_user(full_name, email, dob, gender, aadhar_no, pan_no, mobile, 
         
         user_code = f"MLM{random.randint(10000, 99999)}"
         
+        # --- 🌟 THE SPILLOVER ENGINE 🌟 ---
         leg = str(leg).lower().strip()
-        if leg not in ['left', 'right']: leg = 'left'
+        if leg not in ['left', 'right']: leg = 'left' # Fallback
         
         placement_id = real_sponsor_id
         
+        # This loop finds the absolute bottom of the specified leg
         if placement_id:
             while True:
+                # Look for someone already in this slot
                 cursor.execute("SELECT id FROM users WHERE placement_id = %s AND leg = %s", (placement_id, leg))
                 child = cursor.fetchone()
                 if child:
+                    # Slot taken, move down to that child and repeat
                     placement_id = child['id']
                 else:
+                    # Found an empty slot at the bottom!
                     break 
+        
+        # Hash the password securely before inserting it into the database
+        hashed_password = generate_password_hash(password)
         
         cursor.execute("""
             INSERT INTO users (full_name, email, user_code, dob, gender, aadhar_no, pan_no, mobile, password, sponsor_id, placement_id, leg) 
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-        """, (full_name, email, user_code, dob, gender, aadhar_no, pan_no, mobile, password, real_sponsor_id, placement_id, leg))
+        """, (full_name, email, user_code, dob, gender, aadhar_no, pan_no, mobile, hashed_password, real_sponsor_id, placement_id, leg))
         
         db.commit() 
+        # Optional: threading.Thread(target=send_welcome_email, ...).start()
+        
         return {"status": "success", "message": f"Registration successful!\nYour Login ID is: {user_code}"}
         
     except mysql.connector.IntegrityError as e:
@@ -489,15 +508,38 @@ def register_new_user(full_name, email, dob, gender, aadhar_no, pan_no, mobile, 
         cursor.close()
         db.close()
 
+def verify_admin_login(username, password):
+    db = get_db_connection()
+    if not db: return None
+    cursor = db.cursor(dictionary=True)
+    try:
+        # Securely check the hashed password for admins
+        cursor.execute("SELECT id, username as name, role, password_hash FROM admin_users WHERE username = %s", (username,))
+        admin = cursor.fetchone()
+        
+        if admin and check_password_hash(admin['password_hash'], password):
+            admin.pop('password_hash', None) # Remove hash from memory
+            return admin
+        return None
+    except Exception as e:
+        print("Admin Login Error:", e)
+        return None
+    finally:
+        cursor.close()
+        db.close()
+        
 def verify_login(user_code, password):
     db = get_db_connection()
     if not db: return None
     cursor = db.cursor(dictionary=True)
     try:
-        cursor.execute("SELECT id, full_name as name, user_code, is_active FROM users WHERE user_code = %s AND password = %s", (user_code, password))
+        # Securely check the hashed password
+        cursor.execute("SELECT id, full_name as name, user_code, is_active, password FROM users WHERE user_code = %s", (user_code,))
         user = cursor.fetchone()
         
-        if user:
+        if user and check_password_hash(user['password'], password):
+            # Remove the password from the dictionary before returning the user profile
+            user.pop('password', None)
             return user
         return None
     except Exception as e:
