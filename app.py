@@ -1535,63 +1535,6 @@ def api_admin_move_user():
     finally:
         cursor.close(); db.close()
 
-@app.route('/api/admin/roi/logs')
-def api_admin_roi_logs():
-    if session.get('user_name') == "Super Admin":
-        return jsonify({"status":"ok","logs":[
-            {"user_code":"MLM001", "full_name":"Ravi Kumar", "package_name": "Advanced", "roi_percent": 1.5, "amount": 375, "created_at":"04 Jun 2026", "status": "Credited"},
-            {"user_code":"MLM002", "full_name":"Suresh Babu", "package_name": "Master", "roi_percent": 1.2, "amount": 144, "created_at":"04 Jun 2026", "status": "Credited"},
-            {"user_code":"MLM005", "full_name":"Karthik Raja", "package_name": "Basic", "roi_percent": 1.0, "amount": 50, "created_at":"04 Jun 2026", "status": "Credited"}
-        ]})
-    return jsonify({"status": "error", "message": "Database not implemented yet"})
-
-@app.route('/api/admin/roi/manual-credit', methods=['POST'])
-def api_admin_roi_manual_credit():
-    if session.get('user_name') == "Super Admin": 
-        return jsonify({"status":"ok","message":"Manual ROI Credited (Demo Mode)"})
-    return jsonify({"error": "Unauthorized"}), 401
-
-@app.route('/api/admin/roi/engine', methods=['POST'])
-def api_admin_roi_engine():
-    if session.get('user_name') == "Super Admin":
-        action = request.json.get('action', 'update').upper()
-        return jsonify({"status": "ok", "message": f"ROI Engine {action}D successfully (Demo Mode)"})
-    return jsonify({"error": "Unauthorized"}), 401
-
-@app.route('/api/admin/roi/export')
-def api_admin_roi_export():
-    if session.get('user_name') == "Super Admin":
-        import csv, io
-        from flask import Response
-        output = io.StringIO()
-        writer = csv.writer(output)
-        writer.writerow(['user_code', 'full_name', 'package', 'roi_percent', 'amount', 'date', 'status'])
-        writer.writerow(['MLM001', 'Ravi Kumar', 'Advanced', '1.5%', '375', '04 Jun 2026', 'Credited'])
-        writer.writerow(['MLM002', 'Suresh Babu', 'Master', '1.2%', '144', '04 Jun 2026', 'Credited'])
-        return Response(output.getvalue(), mimetype='text/csv', headers={"Content-Disposition":"attachment;filename=roi_logs.csv"})
-    return jsonify({"error": "Unauthorized"}), 401
-
-@app.route('/api/admin/direct-bonus/settings', methods=['POST'])
-def api_admin_direct_bonus_settings():
-    if session.get('user_name') == "Super Admin":
-        data = request.get_json()
-        return jsonify({"status": "ok", "message": "Settings saved successfully!"})
-    return jsonify({"error": "Unauthorized"}), 401
-
-@app.route('/api/admin/direct-bonus/export')
-def api_admin_direct_bonus_export():
-    fmt = request.args.get('format', 'excel')
-    
-    output = io.StringIO()
-    writer = csv.writer(output)
-    writer.writerow(['User', 'Referred', 'Package', 'Bonus %', 'Amount', 'Date', 'Status'])
-    writer.writerow(['Ravi Kumar', 'MLM211', 'Advanced', '10%', '2500', '04 Jun 2026', 'Credited'])
-    writer.writerow(['Suresh Babu', 'MLM212', 'Master', '8%', '960', '03 Jun 2026', 'Credited'])
-    
-    response = Response(output.getvalue(), mimetype='text/csv')
-    response.headers["Content-Disposition"] = f"attachment; filename=direct_bonus_report.{fmt}"
-    return response
-
 @app.route('/api/admin/reports/income')
 def api_admin_income_reports():
     if session.get('user_name') == "Super Admin":
