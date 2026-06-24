@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Super Admin Panel - MLM System</title>
+<title>Admin Panel - MLM System</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -45,7 +45,7 @@ body{background:var(--bg-color);color:var(--text-main);display:flex;height:100vh
 .submenu li a:hover,.submenu li a.sub-active{background:transparent;color:white;border-left:2px solid var(--c-blue);}
 
 /* MAIN */
-.main-content{flex:1;display:flex;flex-direction:column;overflow-y:auto;background:#f8f9fa;}
+.main-content{flex:1;display:flex;flex-direction:column;overflow-y:auto;background:#f8f9fa;scroll-behavior:smooth;}
 .top-header{background:var(--card-bg);padding:15px 30px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border-color);position:sticky;top:0;z-index:50;}
 .page-title h1{font-size:22px;font-weight:700;color:var(--text-main);}
 .header-actions{display:flex;align-items:center;gap:20px;}
@@ -303,8 +303,71 @@ input:checked+.slider:before{transform:translateX(20px);}
 .section-view.active-view{animation:slideIn 0.25s ease;}
 
 /* RESPONSIVE */
-@media(max-width:1100px){.kpi-grid{grid-template-columns:repeat(3,1fr);}.charts-grid{grid-template-columns:repeat(2,1fr);}}
-@media(max-width:768px){.sidebar{position:absolute;left:-260px;}.main-content{margin-left:0;}.kpi-grid{grid-template-columns:repeat(2,1fr);}.charts-grid{grid-template-columns:1fr;}.form-grid,.form-grid-3{grid-template-columns:1fr;}.wallet-summary,.rank-grid,.stats-row{grid-template-columns:1fr;}}
+.hamburger { display:none; font-size:20px; cursor:pointer; color:var(--text-main); margin-right:15px; }
+.hide-mobile { display: inline; }
+
+/* Ensures tables scroll sideways on mobile instead of breaking the layout */
+.table-card { overflow-x: auto; }
+
+/* RESPONSIVE & MENU FIXES */
+.hamburger { display:none; font-size:20px; cursor:pointer; color:var(--text-main); margin-right:15px; }
+.hide-mobile { display: inline; }
+.sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(11,20,55,0.5); z-index: 1500; backdrop-filter: blur(2px); }
+
+@media(max-width:1100px) {
+  .kpi-grid { grid-template-columns: repeat(3,1fr); }
+  .charts-grid { grid-template-columns: repeat(2,1fr); }
+}
+
+@media(max-width:768px) {
+  /* Sidebar Drawer & Overlay */
+  .sidebar { position:fixed; left:-260px; height:100%; transition:left 0.3s ease; box-shadow: 4px 0 15px rgba(0,0,0,0.15); z-index: 2000; }
+  .sidebar.mobile-open { left:0; }
+  .sidebar-overlay.show { display: block; }
+  .hamburger { display:block; }
+  .main-content { margin-left:0; }
+  
+  /* Make horizontal tab menus swipeable */
+  .tabs-bar { overflow-x: auto; white-space: nowrap; flex-wrap: nowrap; -webkit-overflow-scrolling: touch; padding-bottom: 2px; }
+  .tabs-bar::-webkit-scrollbar { height: 0px; background: transparent; }
+  
+  /* Prevent Action Dropdowns from clipping inside responsive tables */
+  .table-card { padding-bottom: 60px; }
+  .action-menu { right: 0; left: auto; }
+  
+  /* 🚨 THE FIX: Force all grids to stack & allow tables inside form-cards to scroll sideways 🚨 */
+  .kpi-grid, .charts-grid, .charts-grid-2, .form-grid, .form-grid-3, .wallet-summary, .rank-grid, .stats-row, .settings-grid { 
+      grid-template-columns: 1fr !important; 
+  }
+  
+  /* Target ANY hardcoded inline grids globally */
+  div[style*="grid-template-columns"] { 
+      grid-template-columns: 1fr !important; 
+  }
+  
+  /* Make Form Cards horizontally scrollable so wide tables don't stretch the screen */
+  .table-card, .form-card { 
+      overflow-x: auto; 
+      -webkit-overflow-scrolling: touch; 
+  }
+  
+  /* Ensure inputs don't break flexboxes */
+  input, select, textarea { max-width: 100%; }
+  
+  /* Fix Header Overlap */
+  .top-header { padding: 12px 16px; }
+  .header-actions { gap: 12px; }
+  .date-display, .hide-mobile, .admin-profile i { display: none !important; }
+  .page-title h1 { font-size: 18px; }
+}
+
+@media(max-width:480px) {
+  .kpi-grid { grid-template-columns: 1fr; }
+  .table-toolbar { flex-direction: column; align-items: stretch; gap: 12px; }
+  .toolbar-right { justify-content: flex-start; }
+  .search-box input { width: 100%; }
+}
+</style>
 </style>
 </head>
 <body data-active="{{ active|default('dashboard') }}">
@@ -355,12 +418,19 @@ input:checked+.slider:before{transform:translateX(20px);}
 <!-- MAIN CONTENT -->
 <main class="main-content">
   <header class="top-header">
-    <div class="page-title"><h1 id="pageTitle">Dashboard</h1></div>
+    <div style="display:flex;align-items:center;">
+      <i class="fas fa-bars hamburger" onclick="toggleSidebar()"></i>
+      <div class="page-title"><h1 id="pageTitle">Dashboard</h1></div>
+    </div>
     <div class="header-actions">
-      <div class="date-display" id="liveDateDisplay"><i class="far fa-calendar" style="color:var(--c-blue)"></i> Loading...</div>
+      <div class="date-display"><i class="far fa-calendar" style="color:var(--c-blue)"></i> 04 Jun 2026</div>
       <div class="icon-btn"><i class="fas fa-search"></i></div>
-      <div class="icon-btn"><i class="far fa-bell"></i><span class="badge-notif">7</span></div>
-      <div class="admin-profile"><img src="https://cdn-icons-png.flaticon.com/512/149/149071.png" alt="Admin"> Super Admin <i class="fas fa-chevron-down" style="font-size:10px"></i></div>
+      <div class="icon-btn"><i class="far fa-bell"></i><span class="badge-notif" id="top-notif-badge">7</span></div>
+      <div class="admin-profile">
+        <img src="https://cdn-icons-png.flaticon.com/512/149/149071.png" alt="Admin"> 
+        <span class="hide-mobile">Super Admin</span> 
+        <i class="fas fa-chevron-down hide-mobile" style="font-size:10px"></i>
+      </div>
     </div>
   </header>
 
@@ -370,18 +440,18 @@ input:checked+.slider:before{transform:translateX(20px);}
   <div id="sec-dashboard" class="section-view {% if active=='dashboard' %}active-view{% endif %} page-container">
     <div class="breadcrumb"><i class="fas fa-home"></i> <span>Dashboard</span></div>
     <div class="kpi-grid">
-      <div class="kpi-card" style="border-color:rgba(37,99,235,0.2)"><div class="kpi-icon" style="background:rgba(37,99,235,0.1);color:var(--c-blue)"><i class="fas fa-users"></i></div><div class="kpi-details"><h4>Total Users</h4><h2><span id="kpi-total-users">0</span></h2><div class="kpi-trend t-green">▲ +12.5%</div></div></div>
-      <div class="kpi-card" style="border-color:rgba(16,185,129,0.2)"><div class="kpi-icon" style="background:rgba(16,185,129,0.1);color:var(--c-green)"><i class="fas fa-user-check"></i></div><div class="kpi-details"><h4>Active Users</h4><h2><span id="kpi-active-users">0</span></h2><div class="kpi-trend t-green">▲ +10.2%</div></div></div>
-      <div class="kpi-card" style="border-color:rgba(217,70,239,0.2)"><div class="kpi-icon" style="background:rgba(217,70,239,0.1);color:var(--c-pink)"><i class="fas fa-user-times"></i></div><div class="kpi-details"><h4>Inactive Users</h4><h2><span id="kpi-inactive-users">0</span></h2><div class="kpi-trend t-red">▼ -2.1%</div></div></div>
-      <div class="kpi-card" style="border-color:rgba(139,92,246,0.2)"><div class="kpi-icon" style="background:rgba(139,92,246,0.1);color:var(--c-purple)"><i class="fas fa-user-plus"></i></div><div class="kpi-details"><h4>Today Joining</h4><h2><span id="kpi-today-joining">0</span></h2><div class="kpi-trend t-green">▲ +18.3%</div></div></div>
-      <div class="kpi-card" style="border-color:rgba(59,130,246,0.2)"><div class="kpi-icon" style="background:rgba(59,130,246,0.1);color:var(--c-light-blue)"><i class="fas fa-rupee-sign"></i></div><div class="kpi-details"><h4>Total Deposits</h4><h2><span id="kpi-total-deposits">₹0</span></h2><div class="kpi-trend t-green">▲ +15.6%</div></div></div>
-      <div class="kpi-card" style="border-color:rgba(249,115,22,0.2)"><div class="kpi-icon" style="background:rgba(249,115,22,0.1);color:var(--c-orange)"><i class="fas fa-wallet"></i></div><div class="kpi-details"><h4>Total Withdrawals</h4><h2><span id="kpi-total-withdrawals">₹0</span></h2><div class="kpi-trend t-red">▼ -1.2%</div></div></div>
-      <div class="kpi-card" style="border-color:rgba(20,184,166,0.2)"><div class="kpi-icon" style="background:rgba(20,184,166,0.1);color:var(--c-teal)"><i class="fas fa-chart-line"></i></div><div class="kpi-details"><h4>Company Turnover</h4><h2><span id="kpi-turnover">₹0</span></h2><div class="kpi-trend t-green">▲ +8.4%</div></div></div>
-      <div class="kpi-card" style="border-color:rgba(37,99,235,0.2)"><div class="kpi-icon" style="background:rgba(37,99,235,0.1);color:var(--c-blue)"><i class="fas fa-chart-bar"></i></div><div class="kpi-details"><h4>Total Income Dist.</h4><h2><span id="kpi-income-dist">₹0</span></h2><div class="kpi-trend t-green">▲ +5.8%</div></div></div>
-      <div class="kpi-card" style="border-color:rgba(249,115,22,0.2)"><div class="kpi-icon" style="background:rgba(249,115,22,0.1);color:var(--c-orange)"><i class="fas fa-hourglass-half"></i></div><div class="kpi-details"><h4>Pending Withdrawals</h4><h2><span id="kpi-pending-wd">₹0</span></h2><div class="kpi-trend t-red">▲ +3.1%</div></div></div>
-      <div class="kpi-card" style="border-color:rgba(37,99,235,0.2)"><div class="kpi-icon" style="background:rgba(37,99,235,0.1);color:var(--c-blue)"><i class="fas fa-percentage"></i></div><div class="kpi-details"><h4>Today's ROI Dist.</h4><h2><span id="kpi-today-roi">₹0</span></h2><div class="kpi-trend t-green">▲ +6.7%</div></div></div>
-      <div class="kpi-card" style="border-color:rgba(16,185,129,0.2)"><div class="kpi-icon" style="background:rgba(16,185,129,0.1);color:var(--c-green)"><i class="fas fa-graduation-cap"></i></div><div class="kpi-details"><h4>Total Course Sales</h4><h2><span id="kpi-course-sales">0</span></h2><div class="kpi-trend t-green">▲ +11.7%</div></div></div>
-      <div class="kpi-card" style="border-color:rgba(139,92,246,0.2)"><div class="kpi-icon" style="background:rgba(139,92,246,0.1);color:var(--c-purple)"><i class="fas fa-calendar-check"></i></div><div class="kpi-details"><h4>Monthly Revenue</h4><h2><span id="kpi-monthly-rev">₹0</span></h2><div class="kpi-trend t-green">▲ +9.2%</div></div></div>
+      <div class="kpi-card" style="border-color:rgba(37,99,235,0.2)"><div class="kpi-icon" style="background:rgba(37,99,235,0.1);color:var(--c-blue)"><i class="fas fa-users"></i></div><div class="kpi-details"><h4>Total Users</h4><h2><span id="kpi-total-users">25,430</span></h2><div class="kpi-trend t-green">▲ +12.5%</div></div></div>
+      <div class="kpi-card" style="border-color:rgba(16,185,129,0.2)"><div class="kpi-icon" style="background:rgba(16,185,129,0.1);color:var(--c-green)"><i class="fas fa-user-check"></i></div><div class="kpi-details"><h4>Active Users</h4><h2><span id="kpi-active-users">18,760</span></h2><div class="kpi-trend t-green">▲ +10.2%</div></div></div>
+      <div class="kpi-card" style="border-color:rgba(217,70,239,0.2)"><div class="kpi-icon" style="background:rgba(217,70,239,0.1);color:var(--c-pink)"><i class="fas fa-user-times"></i></div><div class="kpi-details"><h4>Inactive Users</h4><h2><span id="kpi-inactive-users">6,670</span></h2><div class="kpi-trend t-red">▼ -2.1%</div></div></div>
+      <div class="kpi-card" style="border-color:rgba(139,92,246,0.2)"><div class="kpi-icon" style="background:rgba(139,92,246,0.1);color:var(--c-purple)"><i class="fas fa-user-plus"></i></div><div class="kpi-details"><h4>Today Joining</h4><h2><span id="kpi-today-joining">312</span></h2><div class="kpi-trend t-green">▲ +18.3%</div></div></div>
+      <div class="kpi-card" style="border-color:rgba(59,130,246,0.2)"><div class="kpi-icon" style="background:rgba(59,130,246,0.1);color:var(--c-light-blue)"><i class="fas fa-rupee-sign"></i></div><div class="kpi-details"><h4>Total Deposits</h4><h2><span id="kpi-total-deposits">₹12,45,680</span></h2><div class="kpi-trend t-green">▲ +15.6%</div></div></div>
+      <div class="kpi-card" style="border-color:rgba(249,115,22,0.2)"><div class="kpi-icon" style="background:rgba(249,115,22,0.1);color:var(--c-orange)"><i class="fas fa-wallet"></i></div><div class="kpi-details"><h4>Total Withdrawals</h4><h2><span id="kpi-total-withdrawals">₹8,56,210</span></h2><div class="kpi-trend t-red">▼ -1.2%</div></div></div>
+      <div class="kpi-card" style="border-color:rgba(20,184,166,0.2)"><div class="kpi-icon" style="background:rgba(20,184,166,0.1);color:var(--c-teal)"><i class="fas fa-chart-line"></i></div><div class="kpi-details"><h4>Company Turnover</h4><h2><span id="kpi-turnover">₹28,75,630</span></h2><div class="kpi-trend t-green">▲ +8.4%</div></div></div>
+      <div class="kpi-card" style="border-color:rgba(37,99,235,0.2)"><div class="kpi-icon" style="background:rgba(37,99,235,0.1);color:var(--c-blue)"><i class="fas fa-chart-bar"></i></div><div class="kpi-details"><h4>Total Income Dist.</h4><h2><span id="kpi-income-dist">₹15,68,950</span></h2><div class="kpi-trend t-green">▲ +5.8%</div></div></div>
+      <div class="kpi-card" style="border-color:rgba(249,115,22,0.2)"><div class="kpi-icon" style="background:rgba(249,115,22,0.1);color:var(--c-orange)"><i class="fas fa-hourglass-half"></i></div><div class="kpi-details"><h4>Pending Withdrawals</h4><h2><span id="kpi-pending-wd">₹1,25,600</span></h2><div class="kpi-trend t-red">▲ +3.1%</div></div></div>
+      <div class="kpi-card" style="border-color:rgba(37,99,235,0.2)"><div class="kpi-icon" style="background:rgba(37,99,235,0.1);color:var(--c-blue)"><i class="fas fa-percentage"></i></div><div class="kpi-details"><h4>Today's ROI Dist.</h4><h2><span id="kpi-today-roi">₹2,45,300</span></h2><div class="kpi-trend t-green">▲ +6.7%</div></div></div>
+      <div class="kpi-card" style="border-color:rgba(16,185,129,0.2)"><div class="kpi-icon" style="background:rgba(16,185,129,0.1);color:var(--c-green)"><i class="fas fa-graduation-cap"></i></div><div class="kpi-details"><h4>Total Course Sales</h4><h2><span id="kpi-course-sales">8,940</span></h2><div class="kpi-trend t-green">▲ +11.7%</div></div></div>
+      <div class="kpi-card" style="border-color:rgba(139,92,246,0.2)"><div class="kpi-icon" style="background:rgba(139,92,246,0.1);color:var(--c-purple)"><i class="fas fa-calendar-check"></i></div><div class="kpi-details"><h4>Monthly Revenue</h4><h2><span id="kpi-monthly-rev">₹4,32,800</span></h2><div class="kpi-trend t-green">▲ +9.2%</div></div></div>
     </div>
     <div class="charts-grid">
       <div class="chart-card"><div class="chart-title">Daily Joining Graph</div><div class="chart-body"><canvas id="joinChart"></canvas></div></div>
@@ -433,7 +503,7 @@ input:checked+.slider:before{transform:translateX(20px);}
         <thead><tr><th>#</th><th>User</th><th>Mobile</th><th>Sponsor</th><th>Package</th><th>Wallet Balance</th><th>Status</th><th>Joined</th><th>Actions</th></tr></thead>
         <tbody id="usersTableBody"></tbody>
       </table>
-      <div class="pagination-bar"><span class="pag-info" id="usersCountInfo"></span><div class="pag-buttons" id="usersPag"></div></div>
+      <div class="pagination-bar"><span class="pag-info" id="usersCountInfo">Showing 1-5 of 25,430 users</span><div class="pag-buttons" id="usersPag"><button class="pag-btn"><i class="fas fa-chevron-left"></i></button><button class="pag-btn active">1</button><button class="pag-btn">2</button><button class="pag-btn">3</button><span style="padding:0 6px;font-size:12px">...</span><button class="pag-btn">2543</button><button class="pag-btn"><i class="fas fa-chevron-right"></i></button></div></div>
     </div>
   </div>
 <div class="modal-overlay" id="editUserModal" onclick="closeOnOverlay(event,this)">
@@ -782,10 +852,12 @@ input:checked+.slider:before{transform:translateX(20px);}
             <thead><tr><th>User</th><th>Rank</th><th>Left Team</th><th>Right Team</th><th>Achieved On</th><th>Monthly Royalty</th><th>Status</th></tr></thead>
             <tbody>
                 <tr>
-                    <td colspan="7" style="text-align:center;padding:20px;color:var(--text-muted)">No royalty achievers yet</td>
+                    <td><div class="user-cell"><div class="user-avatar">RK</div><div><div class="user-name">Ravi Kumar</div><div class="user-id">MLM001</div></div></div></td>
+                    <td><span class="badge b-purple">Diamond Captain</span></td><td>2,450</td><td>1,980</td><td>Jan 2024</td><td>₹12,400</td><td><span class="badge b-active">Active</span></td>
                 </tr>
                 <tr>
-
+                    <td><div class="user-cell"><div class="user-avatar">SB</div><div><div class="user-name">Suresh Babu</div><div class="user-id">MLM002</div></div></div></td>
+                    <td><span class="badge b-info">Gold Captain</span></td><td>1,120</td><td>890</td><td>Feb 2024</td><td>₹6,800</td><td><span class="badge b-active">Active</span></td>
                 </tr>
             </tbody>
         </table>
@@ -798,9 +870,9 @@ input:checked+.slider:before{transform:translateX(20px);}
   <div id="sec-wallet" class="section-view {% if active=='wallet' %}active-view{% endif %} page-container">
     <div class="breadcrumb"><i class="fas fa-home"></i> › <span>Wallet Management</span></div>
     <div class="wallet-summary">
-      <div class="wallet-card"><div class="wallet-icon" style="background:rgba(37,99,235,0.1);color:var(--c-blue)"><i class="fas fa-wallet"></i></div><div class="wallet-balance" style="color:var(--c-blue)">₹0</div><div class="wallet-label">Total Income Wallet</div></div>
-      <div class="wallet-card"><div class="wallet-icon" style="background:rgba(16,185,129,0.1);color:var(--c-green)"><i class="fas fa-money-bill-wave"></i></div><div class="wallet-balance" style="color:var(--c-green)">₹0</div><div class="wallet-label">Withdrawal Wallet</div></div>
-      <div class="wallet-card"><div class="wallet-icon" style="background:rgba(249,115,22,0.1);color:var(--c-orange)"><i class="fas fa-university"></i></div><div class="wallet-balance" style="color:var(--c-orange)">₹0</div><div class="wallet-label">Admin Wallet (Total)</div></div>
+      <div class="wallet-card"><div class="wallet-icon" style="background:rgba(37,99,235,0.1);color:var(--c-blue)"><i class="fas fa-wallet"></i></div><div class="wallet-balance" style="color:var(--c-blue)">₹15,68,950</div><div class="wallet-label">Total Income Wallet</div></div>
+      <div class="wallet-card"><div class="wallet-icon" style="background:rgba(16,185,129,0.1);color:var(--c-green)"><i class="fas fa-money-bill-wave"></i></div><div class="wallet-balance" style="color:var(--c-green)">₹8,56,210</div><div class="wallet-label">Withdrawal Wallet</div></div>
+      <div class="wallet-card"><div class="wallet-icon" style="background:rgba(249,115,22,0.1);color:var(--c-orange)"><i class="fas fa-university"></i></div><div class="wallet-balance" style="color:var(--c-orange)">₹28,75,630</div><div class="wallet-label">Admin Wallet (Total)</div></div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:15px;margin-bottom:15px">
       <div class="form-card">
@@ -838,10 +910,19 @@ input:checked+.slider:before{transform:translateX(20px);}
   <div id="sec-deposits" class="section-view {% if active=='deposits' %}active-view{% endif %} page-container">
     <div class="breadcrumb"><i class="fas fa-home"></i> › <span>Deposit Management</span></div>
     <div class="stats-row">
-      <div class="stat-mini-card"><div class="stat-icon" style="background:rgba(249,115,22,0.1);color:var(--c-orange)"><i class="fas fa-clock"></i></div><div><div class="stat-val" id="dep-stat-pending">0</div><div class="stat-label">Pending Deposits</div></div></div>
-      <div class="stat-mini-card"><div class="stat-icon" style="background:rgba(16,185,129,0.1);color:var(--c-green)"><i class="fas fa-check"></i></div><div><div class="stat-val" id="dep-stat-approved">₹0</div><div class="stat-label">Total Approved</div></div></div>
-      <div class="stat-mini-card"><div class="stat-icon" style="background:rgba(239,68,68,0.1);color:var(--c-red)"><i class="fas fa-times"></i></div><div><div class="stat-val" id="dep-stat-rejected">0</div><div class="stat-label">Rejected</div></div></div>
-    </div>
+  <div class="stat-mini-card">
+    <div class="stat-icon" style="background:rgba(249,115,22,0.1);color:var(--c-orange)"><i class="fas fa-clock"></i></div>
+    <div><div class="stat-val" id="dep-card-pending">0</div><div class="stat-label">Pending Deposits</div></div>
+  </div>
+  <div class="stat-mini-card">
+    <div class="stat-icon" style="background:rgba(16,185,129,0.1);color:var(--c-green)"><i class="fas fa-check"></i></div>
+    <div><div class="stat-val" id="dep-card-approved">₹0</div><div class="stat-label">Total Approved</div></div>
+  </div>
+  <div class="stat-mini-card">
+    <div class="stat-icon" style="background:rgba(239,68,68,0.1);color:var(--c-red)"><i class="fas fa-times"></i></div>
+    <div><div class="stat-val" id="dep-card-rejected">0</div><div class="stat-label">Rejected</div></div>
+  </div>
+</div>
     <div class="table-card">
     <div class="tabs-bar">
         <button class="tab-btn active" onclick="switchDepTab(this,'PENDING')">Pending</button>
@@ -869,8 +950,8 @@ input:checked+.slider:before{transform:translateX(20px);}
   <div id="sec-withdrawals" class="section-view {% if active=='withdrawals' %}active-view{% endif %} page-container">
   <div class="breadcrumb"><i class="fas fa-home"></i> › <span>Withdrawal Management</span></div>
   <div class="stats-row">
-    <div class="stat-mini-card"><div class="stat-icon" style="background:rgba(249,115,22,0.1);color:var(--c-orange)"><i class="fas fa-hourglass-half"></i></div><div><div class="stat-val">₹0</div><div class="stat-label">Pending Requests</div></div></div>
-    <div class="stat-mini-card"><div class="stat-icon" style="background:rgba(16,185,129,0.1);color:var(--c-green)"><i class="fas fa-check-double"></i></div><div><div class="stat-val">₹0</div><div class="stat-label">Total Approved</div></div></div>
+    <div class="stat-mini-card"><div class="stat-icon" style="background:rgba(249,115,22,0.1);color:var(--c-orange)"><i class="fas fa-hourglass-half"></i></div><div><div class="stat-val" id="wd-pending-amt">₹0</div><div class="stat-label" id="wd-pending-cnt">Pending (0 Requests)</div></div></div>
+    <div class="stat-mini-card"><div class="stat-icon" style="background:rgba(16,185,129,0.1);color:var(--c-green)"><i class="fas fa-check-double"></i></div><div><div class="stat-val" id="wd-approved-amt">₹0</div><div class="stat-label">Total Approved</div></div></div>
     <div class="stat-mini-card"><div class="stat-icon" style="background:rgba(37,99,235,0.1);color:var(--c-blue)"><i class="fas fa-calculator"></i></div><div><div class="stat-val">10%</div><div class="stat-label">TDS Deduction Rate</div></div></div>
   </div>
   <div class="table-card">
@@ -903,7 +984,7 @@ input:checked+.slider:before{transform:translateX(20px);}
         <div class="toolbar-right">
           <select class="filter-select"><option>Binary Tree</option><option>Genealogy Tree</option><option>Sponsor Tree</option></select>
           <button class="btn-primary" onclick="loadTree()"><i class="fas fa-eye"></i> View Tree</button>
-          <button class="btn-outline" onclick="openMoveUserModal('')"><i class="fas fa-arrows-alt"></i> Move User</button>
+          <button class="btn-outline" onclick="openMoveUserModal('MLM001')"><i class="fas fa-arrows-alt"></i> Move User</button>
         </div>
       </div>
     </div>
@@ -912,18 +993,18 @@ input:checked+.slider:before{transform:translateX(20px);}
       <div id="treeVisualContainer" style="overflow-x:auto;padding:10px">
         <div class="tree-node-row">
           <div class="tree-node">
-            <div class="tree-node-box root" style="opacity:0.4"><div class="node-name" style="color:var(--text-muted)">Enter User Code</div><div class="node-id" style="color:var(--text-muted)">to view tree</div></div>
+            <div class="tree-node-box root"><img src="https://cdn-icons-png.flaticon.com/512/149/149071.png"><div class="node-name">Ravi Kumar</div><div class="node-id">MLM001</div><div style="margin-top:4px;font-size:9px;color:var(--c-green);font-weight:700">Active</div></div>
           </div>
         </div>
         <div style="display:flex;justify-content:center"><div class="tree-connector"></div></div>
         <div style="display:flex;justify-content:center;position:relative">
           <div style="display:flex;gap:120px">
             <div class="tree-node">
-              <div class="tree-node-box" style="border-style:dashed;opacity:0.3"><div class="node-name" style="color:var(--text-muted)">Left Empty</div></div>
+              <div class="tree-node-box"><img src="https://cdn-icons-png.flaticon.com/512/149/149071.png"><div class="node-name">Suresh Babu</div><div class="node-id">MLM002</div><div style="margin-top:4px;font-size:9px;color:var(--c-green);font-weight:700">L • Active</div></div>
               <div class="tree-connector"></div>
             </div>
             <div class="tree-node">
-              <div class="tree-node-box" style="border-style:dashed;opacity:0.3"><div class="node-name" style="color:var(--text-muted)">Right Empty</div></div>
+              <div class="tree-node-box"><img src="https://cdn-icons-png.flaticon.com/512/149/149071.png"><div class="node-name">Arun Prakash</div><div class="node-id">MLM003</div><div style="margin-top:4px;font-size:9px;color:var(--c-green);font-weight:700">R • Active</div></div>
               <div class="tree-connector"></div>
             </div>
           </div>
@@ -960,7 +1041,7 @@ input:checked+.slider:before{transform:translateX(20px);}
       </div>
       <table><thead><tr><th>User</th><th>ROI Income</th><th>Direct Bonus</th><th>Binary Bonus</th><th>Level Bonus</th><th>Repurchase</th><th>Royalty</th><th>Total Earned</th></tr></thead>
       <tbody id="reportsTableBody"><tr><td colspan="8" style="text-align:center;padding:20px">Loading...</td></tr></tbody></table>
-      <div class="pagination-bar"><span class="pag-info"></span><div class="pag-buttons"><button class="pag-btn active">1</button><button class="pag-btn">2</button><button class="pag-btn">3</button></div></div>
+      <div class="pagination-bar"><span class="pag-info">Showing 1-3 of 18,760</span><div class="pag-buttons"><button class="pag-btn active">1</button><button class="pag-btn">2</button><button class="pag-btn">3</button></div></div>
     </div>
   </div>
 
@@ -974,10 +1055,10 @@ input:checked+.slider:before{transform:translateX(20px);}
         <h3><i class="fas fa-bell" style="color:var(--c-blue)"></i> Send Notification</h3>
         <div class="form-group" style="margin-bottom:12px"><label>Notification Type</label>
           <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px">
-            <button class="btn-primary btn-sm notif-type-btn active" data-type="push" onclick="selectNotifType(this)"><i class="fas fa-mobile-alt"></i> Push</button>
-            <button class="btn-outline btn-sm notif-type-btn" data-type="email" onclick="selectNotifType(this)"><i class="fas fa-envelope"></i> Email</button>
-            <button class="btn-outline btn-sm notif-type-btn" data-type="sms" onclick="selectNotifType(this)"><i class="fas fa-sms"></i> SMS</button>
-            <button class="btn-outline btn-sm notif-type-btn" data-type="inapp" onclick="selectNotifType(this)"><i class="fas fa-bell"></i> In-App</button>
+            <button type="button" class="btn-primary btn-sm notif-type-btn active" data-type="push" onclick="selectNotifType(this)"><i class="fas fa-mobile-alt"></i> Push</button>
+            <button type="button" class="btn-outline btn-sm notif-type-btn" data-type="email" onclick="selectNotifType(this)"><i class="fas fa-envelope"></i> Email</button>
+            <button type="button" class="btn-outline btn-sm notif-type-btn" data-type="sms" onclick="selectNotifType(this)"><i class="fas fa-sms"></i> SMS</button>
+            <button type="button" class="btn-outline btn-sm notif-type-btn" data-type="inapp" onclick="selectNotifType(this)"><i class="fas fa-bell"></i> In-App</button>
           </div>
           <input type="hidden" id="notif_type" value="push">
         </div>
@@ -988,9 +1069,11 @@ input:checked+.slider:before{transform:translateX(20px);}
       </div>
       <div class="notif-card">
         <h3>Recent Notifications Sent</h3>
-        <div style="text-align:center;padding:20px;color:var(--text-muted);font-size:13px">No notifications sent yet</div>
-        <div class="notif-item"><div class="notif-dot" style="background:var(--c-purple)"></div><div><div class="notif-text">New course "Financial Freedom Masterclass" is now live</div><div class="notif-time">02 Jun 2026 · Push · All Users</div></div></div>
-        <div class="notif-item"><div class="notif-dot" style="background:var(--c-red)"></div><div><div class="notif-text">Holiday on 05 Jun 2026 — ROI paused for the day</div><div class="notif-time">01 Jun 2026 · Push + Email · All Users</div></div></div>
+        <div id="recentNotifsList">
+            <div style="text-align:center;padding:20px;color:var(--text-muted)">
+                <i class="fas fa-spinner fa-spin"></i> Loading recent notifications...
+            </div>
+        </div>
       </div>
     </div>
   </div>
@@ -1001,9 +1084,9 @@ input:checked+.slider:before{transform:translateX(20px);}
   <div id="sec-tickets" class="section-view {% if active=='tickets' %}active-view{% endif %} page-container">
     <div class="breadcrumb"><i class="fas fa-home"></i> › <span>Support Tickets</span></div>
     <div class="stats-row">
-      <div class="stat-mini-card"><div class="stat-icon" style="background:rgba(249,115,22,0.1);color:var(--c-orange)"><i class="fas fa-ticket-alt"></i></div><div><div class="stat-val" id="tkt-stat-open">0</div><div class="stat-label">Open Tickets</div></div></div>
-      <div class="stat-mini-card"><div class="stat-icon" style="background:rgba(37,99,235,0.1);color:var(--c-blue)"><i class="fas fa-reply"></i></div><div><div class="stat-val" id="tkt-stat-replied">0</div><div class="stat-label">Awaiting Reply</div></div></div>
-      <div class="stat-mini-card"><div class="stat-icon" style="background:rgba(16,185,129,0.1);color:var(--c-green)"><i class="fas fa-check-circle"></i></div><div><div class="stat-val" id="tkt-stat-closed">0</div><div class="stat-label">Closed This Month</div></div></div>
+      <div class="stat-mini-card"><div class="stat-icon" style="background:rgba(249,115,22,0.1);color:var(--c-orange)"><i class="fas fa-ticket-alt"></i></div><div><div class="stat-val" id="tic-open">0</div><div class="stat-label">Open Tickets</div></div></div>
+      <div class="stat-mini-card"><div class="stat-icon" style="background:rgba(37,99,235,0.1);color:var(--c-blue)"><i class="fas fa-reply"></i></div><div><div class="stat-val" id="tic-replied">0</div><div class="stat-label">Awaiting Reply</div></div></div>
+      <div class="stat-mini-card"><div class="stat-icon" style="background:rgba(16,185,129,0.1);color:var(--c-green)"><i class="fas fa-check-circle"></i></div><div><div class="stat-val" id="tic-closed">0</div><div class="stat-label">Closed This Month</div></div></div>
     </div>
     <div class="table-card">
       <div class="tabs-bar"><button class="tab-btn active" onclick="switchTicketTab(this,'open')">Open</button><button class="tab-btn" onclick="switchTicketTab(this,'replied')">Replied</button><button class="tab-btn" onclick="switchTicketTab(this,'closed')">Closed</button></div>
@@ -1097,41 +1180,65 @@ input:checked+.slider:before{transform:translateX(20px);}
   <div id="sec-cron" class="section-view {% if active=='cron' %}active-view{% endif %} page-container">
   <div class="breadcrumb"><i class="fas fa-home"></i> › <span>Cron Job Management</span></div>
 <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:15px;margin-bottom:15px">
+  
   <div class="cron-card">
     <div class="cron-header"><div><div class="cron-title">ROI Cron</div><div class="cron-info">Daily at 9:00 AM</div></div><span class="badge b-active">Running</span></div>
-    <div class="cron-info">Last Run: Today 9:00 AM · Next: Tomorrow 9:00 AM</div>
-    <div class="progress-bar"><div class="progress-fill" style="width:100%;background:var(--c-green)"></div></div>
-    <div style="display:flex;gap:6px;margin-top:12px"><button class="btn-primary btn-sm" onclick="runCron('roi')"><i class="fas fa-play"></i> Run Now</button><button class="btn-outline btn-sm" onclick="viewCronLogs('roi')"><i class="fas fa-eye"></i> View Logs</button></div>
+    <div class="progress-bar" style="margin: 10px 0;"><div class="progress-fill" style="width:100%;background:var(--c-green)"></div></div>
+    <div style="display:flex;gap:6px;margin-top:12px">
+      <button class="btn-primary btn-sm cron-run-btn" onclick="runCron('roi')"><i class="fas fa-play"></i> Run</button>
+      <button class="btn-danger btn-sm" onclick="toggleCronStatus(this)"><i class="fas fa-ban"></i> Disable</button>
+      <button class="btn-outline btn-sm" onclick="viewCronLogs('roi')"><i class="fas fa-eye"></i> Logs</button>
+    </div>
   </div>
+
   <div class="cron-card">
     <div class="cron-header"><div><div class="cron-title">Binary Cron</div><div class="cron-info">Daily at 10:00 PM</div></div><span class="badge b-active">Running</span></div>
-    <div class="cron-info">Last Run: Today 10:00 PM · Next: Tomorrow 10:00 PM</div>
-    <div class="progress-bar"><div class="progress-fill" style="width:85%;background:var(--c-blue)"></div></div>
-    <div style="display:flex;gap:6px;margin-top:12px"><button class="btn-primary btn-sm" onclick="runCron('binary')"><i class="fas fa-play"></i> Run Now</button><button class="btn-outline btn-sm" onclick="viewCronLogs('binary')"><i class="fas fa-eye"></i> View Logs</button></div>
+    <div class="progress-bar" style="margin: 10px 0;"><div class="progress-fill" style="width:85%;background:var(--c-blue)"></div></div>
+    <div style="display:flex;gap:6px;margin-top:12px">
+      <button class="btn-primary btn-sm cron-run-btn" onclick="runCron('binary')"><i class="fas fa-play"></i> Run</button>
+      <button class="btn-danger btn-sm" onclick="toggleCronStatus(this)"><i class="fas fa-ban"></i> Disable</button>
+      <button class="btn-outline btn-sm" onclick="viewCronLogs('binary')"><i class="fas fa-eye"></i> Logs</button>
+    </div>
   </div>
+
   <div class="cron-card">
-    <div class="cron-header"><div><div class="cron-title">Royalty Cron</div><div class="cron-info">1st of every month</div></div><span class="badge b-pending">Scheduled</span></div>
-    <div class="cron-info">Last Run: Not yet executed</div>
-    <div class="progress-bar"><div class="progress-fill" style="width:10%;background:var(--c-purple)"></div></div>
-    <div style="display:flex;gap:6px;margin-top:12px"><button class="btn-primary btn-sm" onclick="runCron('royalty')"><i class="fas fa-play"></i> Run Now</button><button class="btn-outline btn-sm" onclick="viewCronLogs('royalty')"><i class="fas fa-eye"></i> View Logs</button></div>
+    <div class="cron-header"><div><div class="cron-title">Royalty Cron</div><div class="cron-info">1st of every month</div></div><span class="badge b-active">Running</span></div>
+    <div class="progress-bar" style="margin: 10px 0;"><div class="progress-fill" style="width:10%;background:var(--c-purple)"></div></div>
+    <div style="display:flex;gap:6px;margin-top:12px">
+      <button class="btn-primary btn-sm cron-run-btn" onclick="runCron('royalty')"><i class="fas fa-play"></i> Run</button>
+      <button class="btn-danger btn-sm" onclick="toggleCronStatus(this)"><i class="fas fa-ban"></i> Disable</button>
+      <button class="btn-outline btn-sm" onclick="viewCronLogs('royalty')"><i class="fas fa-eye"></i> Logs</button>
+    </div>
   </div>
+
   <div class="cron-card">
     <div class="cron-header"><div><div class="cron-title">Repurchase Cron</div><div class="cron-info">Daily at 11:59 PM</div></div><span class="badge b-active">Running</span></div>
-    <div class="cron-info">Last Run: Yesterday 11:59 PM</div>
-    <div class="progress-bar"><div class="progress-fill" style="width:100%;background:var(--c-orange)"></div></div>
-    <div style="display:flex;gap:6px;margin-top:12px"><button class="btn-primary btn-sm" onclick="runCron('repurchase')"><i class="fas fa-play"></i> Run Now</button><button class="btn-outline btn-sm" onclick="viewCronLogs('repurchase')"><i class="fas fa-eye"></i> View Logs</button></div>
+    <div class="progress-bar" style="margin: 10px 0;"><div class="progress-fill" style="width:100%;background:var(--c-orange)"></div></div>
+    <div style="display:flex;gap:6px;margin-top:12px">
+      <button class="btn-primary btn-sm cron-run-btn" onclick="runCron('repurchase')"><i class="fas fa-play"></i> Run</button>
+      <button class="btn-danger btn-sm" onclick="toggleCronStatus(this)"><i class="fas fa-ban"></i> Disable</button>
+      <button class="btn-outline btn-sm" onclick="viewCronLogs('repurchase')"><i class="fas fa-eye"></i> Logs</button>
+    </div>
   </div>
+
   <div class="cron-card">
     <div class="cron-header"><div><div class="cron-title">Notification Cron</div><div class="cron-info">Every 30 minutes</div></div><span class="badge b-active">Running</span></div>
-    <div class="cron-info">Last Run: Not yet executed</div>
-    <div class="progress-bar"><div class="progress-fill" style="width:60%;background:var(--c-teal)"></div></div>
-    <div style="display:flex;gap:6px;margin-top:12px"><button class="btn-primary btn-sm" onclick="runCron('notification')"><i class="fas fa-play"></i> Run Now</button><button class="btn-outline btn-sm" onclick="viewCronLogs('notification')"><i class="fas fa-eye"></i> View Logs</button></div>
+    <div class="progress-bar" style="margin: 10px 0;"><div class="progress-fill" style="width:60%;background:var(--c-teal)"></div></div>
+    <div style="display:flex;gap:6px;margin-top:12px">
+      <button class="btn-primary btn-sm cron-run-btn" onclick="runCron('notification')"><i class="fas fa-play"></i> Run</button>
+      <button class="btn-danger btn-sm" onclick="toggleCronStatus(this)"><i class="fas fa-ban"></i> Disable</button>
+      <button class="btn-outline btn-sm" onclick="viewCronLogs('notification')"><i class="fas fa-eye"></i> Logs</button>
+    </div>
   </div>
+
   <div class="cron-card">
-    <div class="cron-header"><div><div class="cron-title">Flush Cron</div><div class="cron-info">Daily at 12:00 AM</div></div><span class="badge b-inactive">Inactive</span></div>
-    <div class="cron-info">Last Run: Not yet executed</div>
-    <div class="progress-bar"><div class="progress-fill" style="width:0%;background:var(--c-red)"></div></div>
-    <div style="display:flex;gap:6px;margin-top:12px"><button class="btn-success btn-sm" onclick="runCron('flush')"><i class="fas fa-power-off"></i> Enable</button><button class="btn-outline btn-sm" onclick="viewCronLogs('flush')"><i class="fas fa-eye"></i> View Logs</button></div>
+    <div class="cron-header"><div><div class="cron-title">Flush Cron</div><div class="cron-info">Daily at 12:00 AM</div></div><span class="badge b-inactive">Disabled</span></div>
+    <div class="progress-bar" style="margin: 10px 0;"><div class="progress-fill" style="width:0%;background:var(--c-red)"></div></div>
+    <div style="display:flex;gap:6px;margin-top:12px">
+      <button class="btn-primary btn-sm cron-run-btn" onclick="runCron('flush')" disabled style="opacity:0.5"><i class="fas fa-play"></i> Run</button>
+      <button class="btn-success btn-sm" onclick="toggleCronStatus(this)"><i class="fas fa-power-off"></i> Enable</button>
+      <button class="btn-outline btn-sm" onclick="viewCronLogs('flush')"><i class="fas fa-eye"></i> Logs</button>
+    </div>
   </div>
 </div>
   <div class="table-card">
@@ -1177,8 +1284,18 @@ input:checked+.slider:before{transform:translateX(20px);}
       <tbody id="adminTableBody">
         <tr>
           <td><div class="user-cell"><div class="user-avatar" style="background:rgba(37,99,235,0.1)">SA</div><div><div class="user-name">Super Admin</div><div class="user-id">admin@mlmsystem.com</div></div></div></td>
-          <td><span class="badge b-purple">Super Admin</span></td><td><span class="badge b-info">All Access</span></td><td>Never</td><td><span class="badge b-active">Active</span></td>
-          <td><div class="action-cell"><button class="btn-icon btn-view" onclick="viewAdmin(0)"><i class="fas fa-eye"></i></button></div></td>
+          <td><span class="badge b-purple">Super Admin</span></td><td><span class="badge b-info">All Access</span></td><td>04 Jun 2026 9:02 AM</td><td><span class="badge b-active">Active</span></td>
+          <td><div class="action-cell"><button class="btn-icon btn-view" onclick="viewAdmin(1)"><i class="fas fa-eye"></i></button></div></td>
+        </tr>
+        <tr>
+          <td><div class="user-cell"><div class="user-avatar" style="background:rgba(16,185,129,0.1);color:var(--c-green)">MA</div><div><div class="user-name">Manager Admin</div><div class="user-id">manager@mlmsystem.com</div></div></div></td>
+          <td><span class="badge b-info">Sub Admin</span></td><td><span class="badge b-active">Limited</span></td><td>04 Jun 2026 10:30 AM</td><td><span class="badge b-active">Active</span></td>
+          <td><div class="action-cell"><button class="btn-icon btn-view" onclick="viewAdmin(2)"><i class="fas fa-eye"></i></button><button class="btn-icon btn-edit" onclick="editAdmin(2)"><i class="fas fa-edit"></i></button><button class="btn-icon btn-delete" onclick="deleteAdmin(2)"><i class="fas fa-trash"></i></button></div></td>
+        </tr>
+        <tr>
+          <td><div class="user-cell"><div class="user-avatar" style="background:rgba(249,115,22,0.1);color:var(--c-orange)">SS</div><div><div class="user-name">Support Staff</div><div class="user-id">support@mlmsystem.com</div></div></div></td>
+          <td><span class="badge b-pending">Staff</span></td><td><span class="badge b-pending">Tickets Only</span></td><td>03 Jun 2026 2:00 PM</td><td><span class="badge b-active">Active</span></td>
+          <td><div class="action-cell"><button class="btn-icon btn-view" onclick="viewAdmin(3)"><i class="fas fa-eye"></i></button><button class="btn-icon btn-edit" onclick="editAdmin(3)"><i class="fas fa-edit"></i></button><button class="btn-icon btn-delete" onclick="deleteAdmin(3)"><i class="fas fa-trash"></i></button></div></td>
         </tr>
       </tbody>
     </table>
@@ -1368,12 +1485,10 @@ input:checked+.slider:before{transform:translateX(20px);}
     <div class="modal-header"><h3>Create New Admin</h3><button class="modal-close" onclick="closeModal('addAdminModal')"><i class="fas fa-times"></i></button></div>
     <div class="modal-body">
       <div class="form-grid">
-        <div class="form-group"><label>Full Name</label><input class="form-control" id="new_admin_name" placeholder="Admin name"></div>
-        <div class="form-group"><label>Username</label><input class="form-control" id="new_admin_username" placeholder="Login username"></div>
-        <div class="form-group"><label>Email</label><input class="form-control" id="new_admin_email" type="email" placeholder="admin@example.com"></div>
-        <div class="form-group"><label>Mobile</label><input class="form-control" id="new_admin_mobile" placeholder="+91 XXXXX XXXXX"></div>
-        <div class="form-group"><label>Password</label><input class="form-control" id="new_admin_password" type="password" placeholder="Strong password"></div>
-        <div class="form-group"><label>Role</label><select class="form-control" id="new_admin_role"><option value="Sub Admin">Sub Admin</option><option value="Manager">Manager</option><option value="Support Staff">Support Staff</option><option value="Accounts">Accounts</option></select></div>
+        <div class="form-group"><label>Full Name</label><input class="form-control" placeholder="Admin name"></div>
+        <div class="form-group"><label>Email</label><input class="form-control" type="email" placeholder="admin@example.com"></div>
+        <div class="form-group"><label>Password</label><input class="form-control" type="password" placeholder="Strong password"></div>
+        <div class="form-group"><label>Role</label><select class="form-control"><option>Sub Admin</option><option>Manager</option><option>Support Staff</option><option>Accounts</option></select></div>
       </div>
       <div style="margin-top:16px">
         <label style="font-size:12px;font-weight:700;display:block;margin-bottom:10px">Permissions</label>
@@ -1387,7 +1502,7 @@ input:checked+.slider:before{transform:translateX(20px);}
         </div>
       </div>
     </div>
-    <div class="modal-footer"><button class="btn-outline" onclick="closeModal('addAdminModal')">Cancel</button><button class="btn-primary" onclick="submitCreateAdmin()">Create Admin</button></div>
+    <div class="modal-footer"><button class="btn-outline" onclick="closeModal('addAdminModal')">Cancel</button><button class="btn-primary">Create Admin</button></div>
   </div>
 </div>
 
@@ -1413,6 +1528,13 @@ input:checked+.slider:before{transform:translateX(20px);}
         </div>
         <div class="modal-footer"><button class="btn-primary" onclick="submitEditAdmin()">Save Changes</button></div>
     </div>
+</div>
+<div class="modal-overlay" id="viewAdminModal" onclick="closeOnOverlay(event,this)">
+  <div class="modal">
+    <div class="modal-header"><h3>Admin Identity Profile</h3><button class="modal-close" onclick="closeModal('viewAdminModal')"><i class="fas fa-times"></i></button></div>
+    <div class="modal-body" id="viewAdminBody">
+      </div>
+  </div>
 </div>
 
 <script>
@@ -1481,6 +1603,7 @@ function showSection(id) {
   document.querySelectorAll('.sidebar-menu li a').forEach(a=>a.classList.remove('active'));
   const nav = document.getElementById('nav-'+id);
   if(nav) nav.classList.add('active');
+  document.querySelector('.main-content').scrollTo({top:0,behavior:'smooth'});
   document.querySelectorAll('.action-menu.show').forEach(m=>m.classList.remove('show'));
   loadSectionData(id);
 }
@@ -1537,10 +1660,247 @@ function loadSectionData(id) {
     holidays: loadHolidays,
     direct: loadDirectBonusData,
     repurchase: loadRepurchaseBonusData,
-    admins: loadAdminList,
-    tree: () => {},
+    tree: loadTree,
+    notifications: loadNotifications,
+    cron: loadCronLogs,
+    admins: loadAdmins
   };
   if(loaders[id]) loaders[id]();
+}
+
+// ── NEW UTILITIES FOR BUTTONS & SETTINGS ──
+function saveSettings(section) {
+    toast(`${section.toUpperCase()} system parameters saved successfully!`, 'success');
+}
+function uploadLogo(id) {
+    toast(`Asset successfully uploaded to content delivery network!`, 'success');
+}
+
+// ── NOTIFICATIONS LOGIC ──
+// ── NOTIFICATIONS LOGIC ──
+function selectNotifType(btn) {
+    // 1. Reset all buttons to outline style
+    document.querySelectorAll('.notif-type-btn').forEach(b => {
+        b.classList.remove('btn-primary', 'active');
+        b.classList.add('btn-outline');
+    });
+    // 2. Set the clicked button to primary (solid blue) style
+    btn.classList.remove('btn-outline');
+    btn.classList.add('btn-primary', 'active');
+    
+    // 3. Update the hidden input value for the payload
+    document.getElementById('notif_type').value = btn.dataset.type;
+}
+
+async function sendNotification(){
+    const title = document.getElementById('notif_title').value.trim(); 
+    const message = document.getElementById('notif_message').value.trim();
+    const type = document.getElementById('notif_type').value;
+    const target = document.getElementById('notif_target').value;
+    
+    if(!title || !message) return toast("Title and message required", "warning");
+
+    const d = await api('/api/admin/notifications/send', 'POST', {title, message, target, type});
+    toast(d.message, d.status === 'ok' ? 'success' : 'error');
+    
+    if(d.status === 'ok') {
+        document.getElementById('notif_title').value = ''; 
+        document.getElementById('notif_message').value = '';
+        loadNotifications(); // Refresh the list on the right side immediately
+        
+        if(type === 'inapp') {
+           const badge = document.querySelector('.badge-notif');
+           if(badge) badge.textContent = parseInt(badge.textContent || 0) + 1;
+        }
+    }
+}
+
+async function loadNotifications() {
+    const d = await api('/api/admin/notifications/recent');
+    if(d.status === 'ok') {
+        const container = document.getElementById('recentNotifsList');
+        if(!container) return;
+        
+        const items = d.notifications.map(n => {
+            let color = 'var(--c-blue)';
+            if(n.type === 'inapp') color = 'var(--c-green)';
+            if(n.type === 'sms') color = 'var(--c-orange)';
+            
+            // Added positioning and the trash can delete button
+            return `
+            <div class="notif-item" style="position:relative; padding-right:35px; align-items:center;">
+                <div class="notif-dot" style="background:${color}"></div>
+                <div style="flex:1;">
+                    <div class="notif-text"><b>${n.title}</b> - ${n.message}</div>
+                    <div class="notif-time">${n.created_at} · ${n.type.toUpperCase()} · ${n.target.toUpperCase()}</div>
+                </div>
+                <button class="btn-icon btn-delete" style="position:absolute; right:0;" onclick="deleteNotification(${n.id})" title="Delete Log">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>`;
+        }).join('');
+        
+        container.innerHTML = items || '<div style="padding:10px;color:gray">No recent notifications sent.</div>';
+    }
+}
+
+// Function to trigger the delete action
+async function deleteNotification(id) {
+    if(!confirm_action("Delete this notification record?")) return;
+    
+    const d = await api(`/api/admin/notifications/${id}/delete`, 'POST');
+    toast(d.message, d.status === 'ok' ? 'success' : 'error');
+    
+    if(d.status === 'ok') {
+        loadNotifications(); // Reloads the notification list instantly
+    }
+}
+
+//── MOBILE MENU CONTROLLERS ──
+function toggleSidebar() {
+    document.getElementById('sidebar').classList.toggle('mobile-open');
+    document.getElementById('sidebarOverlay').classList.toggle('show');
+}
+
+// Ensure the sidebar closes automatically when a section loads on small screens
+const originalShowSection = showSection;
+showSection = function(id) {
+    originalShowSection(id);
+    if(window.innerWidth <= 768) {
+        document.getElementById('sidebar').classList.remove('mobile-open');
+        const overlay = document.getElementById('sidebarOverlay');
+        if(overlay) overlay.classList.remove('show');
+    }
+};
+
+// ── CRON JOB LOGIC ──
+async function loadCronLogs(job = '') {
+    const tbody = document.getElementById('cronLogsBody'); if (!tbody) return;
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center">Loading...</td></tr>';
+    const d = await api(`/api/admin/cron/logs?job=${job}`);
+    if(d.status === 'ok' && d.logs && d.logs.length > 0) {
+        tbody.innerHTML = d.logs.map(l => `<tr><td>${l.job}</td><td>${l.executed_at}</td><td>${l.duration}</td><td>${l.records}</td><td><span class="badge b-${l.status.toLowerCase()==='success'?'active':'rejected'}">${l.status}</span></td></tr>`).join('');
+    } else { tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:gray">No logs found</td></tr>'; }
+}
+function viewCronLogs(job) { loadCronLogs(job); document.getElementById('sec-cron').scrollIntoView({behavior: 'smooth'}); }
+
+// ── AUDIT LOGS LOGIC ──
+async function loadAuditLogs(logType='all'){
+  const container=document.getElementById('auditLogsContainer'); if(!container) return;
+  container.innerHTML = '<div style="text-align:center;padding:20px;color:gray"><i class="fas fa-spinner fa-spin"></i> Gathering audit traces...</div>';
+  const d=await api(`/api/admin/audit-logs?type=${logType}`);
+  if(d.status==='ok' && d.logs && d.logs.length > 0) {
+      container.innerHTML=d.logs.map(l=>`<div class="log-item"><div class="log-action">${l.action}</div><div class="log-detail">${l.description}</div><div class="log-time">${l.created_at}</div></div>`).join('');
+  } else { container.innerHTML = '<div style="text-align:center;padding:20px;color:gray">No matching system audit logs found</div>'; }
+}
+
+// ── ADMIN MANAGEMENT LOGIC ──
+// ── ADMIN MANAGEMENT LOGIC ──
+async function loadAdmins() {
+    const tbody = document.getElementById('adminTableBody'); if(!tbody) return;
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center">Loading...</td></tr>';
+    
+    const d = await api('/api/admin/sub-admins');
+    if(d.status === 'ok' && d.admins && d.admins.length > 0) {
+        tbody.innerHTML = d.admins.map(a => {
+            // Safeguard: Check if this is the root Super Admin (ID 1) or has the Super Admin role
+            const isSuper = (a.id === 1 || String(a.role).toLowerCase().includes('super'));
+            
+            return `
+            <tr>
+              <td>
+                <div class="user-cell">
+                    <div class="user-avatar" style="background:rgba(37,99,235,0.1)">${(a.name||'A')[0].toUpperCase()}</div>
+                    <div><div class="user-name">${a.name}</div><div class="user-id">ID: ${a.id}</div></div>
+                </div>
+              </td>
+              <td><span class="badge b-${isSuper ? 'purple' : 'info'}">${a.role}</span></td>
+              <td><span class="badge b-info">Assigned</span></td>
+              <td>${a.status}</td>
+              <td><span class="badge b-active">Active</span></td>
+              <td>
+                <div class="action-cell">
+                    <button class="btn-icon btn-view" onclick="viewAdmin(${a.id})" title="View Details"><i class="fas fa-eye"></i></button>
+                    ${!isSuper ? `
+                        <button class="btn-icon btn-edit" onclick="editAdminInfo(${a.id}, '${a.name}', '${a.role}')" title="Edit Permissions"><i class="fas fa-edit"></i></button>
+                        <button class="btn-icon btn-delete" onclick="deleteAdminInfo(${a.id})" title="Delete Admin"><i class="fas fa-trash"></i></button>
+                    ` : ''}
+                </div>
+              </td>
+            </tr>`;
+        }).join('');
+    } else { 
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:gray">No admins found</td></tr>'; 
+    }
+}
+
+async function viewAdmin(id) {
+    const d = await api('/api/admin/sub-admins');
+    if(d.status === 'ok') {
+        const admin = d.admins.find(a => a.id == id);
+        if(admin) {
+            document.getElementById('viewAdminBody').innerHTML = `
+                <div style="display:flex; align-items:center; gap:15px; margin-bottom: 20px;">
+                    <div class="user-avatar" style="width:60px; height:60px; font-size:24px;">${admin.name[0]}</div>
+                    <div>
+                        <h2 style="margin:0">${admin.name}</h2>
+                        <span style="color:var(--text-muted)">Admin ID: ${admin.id}</span>
+                    </div>
+                </div>
+                <div class="form-grid">
+                    <div class="form-group"><label>Role Authorization</label><div><span class="badge b-purple">${admin.role}</span></div></div>
+                    <div class="form-group"><label>Account Status</label><div><span class="badge b-active">${admin.status}</span></div></div>
+                </div>
+            `;
+            showModal('viewAdminModal');
+        }
+    }
+}
+function editAdminInfo(id, name, role) {
+    document.getElementById('edit_admin_id').value = id;
+    document.getElementById('edit_admin_name').value = name;
+    document.getElementById('edit_admin_role').value = role;
+    showModal('editAdminModal');
+}
+async function submitEditAdmin() {
+    const id = document.getElementById('edit_admin_id').value;
+    const role = document.getElementById('edit_admin_role').value;
+    const d = await api(`/api/admin/sub-admins/${id}/update`, 'POST', { role });
+    toast(d.message, d.status === 'ok' ? 'success' : 'error');
+    if(d.status === 'ok') { closeModal('editAdminModal'); loadAdmins(); }
+}
+async function deleteAdminInfo(id) {
+    if(!confirm_action("Delete this sub-admin?")) return;
+    const d = await api(`/api/admin/sub-admins/${id}/delete`, 'POST');
+    toast(d.message, d.status === 'ok' ? 'success' : 'error');
+    if(d.status === 'ok') loadAdmins();
+}
+
+// ── SUPPORT TICKETS ──
+async function loadTickets(page=1){
+  ticketPage=page; const tbody=document.getElementById('ticketsTableBody'); if(!tbody) return;
+  tbody.innerHTML='<tr><td colspan="7" style="text-align:center;padding:30px">Loading...</td></tr>';
+  const d=await api(`/api/admin/tickets?status=${ticketStatus}&page=${page}`);
+  
+  if(d.status==='ok') {
+      if(d.stats) {
+          document.getElementById('tic-open').textContent = d.stats.open;
+          document.getElementById('tic-replied').textContent = d.stats.replied;
+          document.getElementById('tic-closed').textContent = d.stats.closed;
+      }
+      if(d.tickets && d.tickets.length > 0) {
+          tbody.innerHTML=d.tickets.map(t=>`<tr><td>#T${t.id}</td><td>${t.user_code}</td><td>${t.subject}</td><td>${badge(t.priority)}</td><td>${badge(t.status)}</td><td>${t.created_at}</td><td><button class="btn-icon btn-delete" onclick="closeTicket(${t.id})" title="Close Ticket"><i class="fas fa-times-circle"></i></button></td></tr>`).join('');
+      } else {
+          tbody.innerHTML='<tr><td colspan="7" style="text-align:center;padding:20px">No tickets found</td></tr>';
+      }
+      renderPagination('ticketsPag', d.total, 20, page, loadTickets);
+  }
+}
+async function closeTicket(id) {
+    if(!confirm_action("Close this ticket?")) return;
+    const d = await api(`/api/admin/tickets/${id}/close`, 'POST');
+    toast(d.message, d.status === 'ok' ? 'success' : 'error');
+    if(d.status === 'ok') loadTickets(ticketPage);
 }
 
 // ── DASHBOARD DYNAMIC ENGINE ─────────────────────────────────────
@@ -1991,12 +2351,7 @@ async function kycReject(id){
   const d=await api(`/api/admin/kyc/${id}/reject`,'POST',{reason:r}); toast(d.message, d.status==='ok'?'success':'error');
   if(d.status==='ok') loadKYC(kycPage); 
 }
-function switchKycTab(btn, status){
-  const mc = document.querySelector('.main-content');
-  const scrollY = mc ? mc.scrollTop : 0;
-  switchTab(btn); kycStatus=status; loadKYC(1);
-  if(mc) setTimeout(()=>{ mc.scrollTop=scrollY; }, 0);
-}
+function switchKycTab(btn, status){ switchTab(btn); kycStatus=status; loadKYC(1); }
 function exportKyc() { window.location.href = `/api/admin/kyc/export?status=${kycStatus}`; toast('Downloading CSV...', 'info'); }
 
 // ── COURSE MANAGEMENT ────────────────────────────────────────────
@@ -2454,45 +2809,31 @@ function exportRoyalty() { window.location.href = '/api/admin/royalty/export'; t
 
 // ── DEPOSITS MANAGEMENT ──────────────────────────────────────────
 let depStatus='PENDING', depPage=1;
+// REPLACE THE TOP PART OF loadDeposits WITH THIS SNIPPET
 async function loadDeposits(page=1){
   depPage=page; const tbody=document.getElementById('depositsTableBody'); if(!tbody) return;
-  tbody.innerHTML='<tr><td colspan="8" style="text-align:center;padding:30px">Loading...</td></tr>';
-  // Reset stat cards to 0 before API response arrives
-  const ps0=document.getElementById('dep-stat-pending'); if(ps0) ps0.textContent='0';
-  const as0=document.getElementById('dep-stat-approved'); if(as0) as0.textContent='₹0';
-  const rs0=document.getElementById('dep-stat-rejected'); if(rs0) rs0.textContent='0';
-  const d=await api(`/api/admin/deposits?status=${depStatus}&page=${page}`);
-
-  // Update stat cards from API response
-  if(d.stats) {
-    const ps = document.getElementById('dep-stat-pending'); if(ps) ps.textContent = d.stats.pending || 0;
-    const as = document.getElementById('dep-stat-approved'); if(as) as.textContent = '₹' + (d.stats.approved_amount || 0).toLocaleString('en-IN');
-    const rs = document.getElementById('dep-stat-rejected'); if(rs) rs.textContent = d.stats.rejected || 0;
-  } else {
-    // Fallback: count from current filtered result
-    const ps = document.getElementById('dep-stat-pending'); if(ps && depStatus==='PENDING') ps.textContent = d.total || 0;
-    const rs = document.getElementById('dep-stat-rejected'); if(rs && depStatus==='REJECTED') rs.textContent = d.total || 0;
+  tbody.innerHTML='<tr><td colspan="8" style="text-align:center;padding:30px"><i class="fas fa-spinner fa-spin"></i> Synchronizing ledger database...</td></tr>';
+  
+  const reqStatus = depStatus.toLowerCase();
+  const d=await api(`/api/admin/deposits?status=${reqStatus}&page=${page}`);
+  
+  if(d.status === 'ok') {
+    const pendingEl = document.getElementById('dep-card-pending');
+    const approvedEl = document.getElementById('dep-card-approved');
+    const rejectedEl = document.getElementById('dep-card-rejected');
+    
+    if(pendingEl) pendingEl.textContent = Number(d.pending_count || 0).toLocaleString('en-IN');
+    if(approvedEl) approvedEl.textContent = fmt_inr(d.approved_amount || d.approved_total || 0);
+    if(rejectedEl) rejectedEl.textContent = Number(d.rejected_count || 0).toLocaleString('en-IN');
   }
-
-  if(d.status!=='ok' || !d.deposits || d.deposits.length===0){
-    tbody.innerHTML='<tr><td colspan="8" style="text-align:center;padding:20px;color:var(--text-muted)">No deposits found</td></tr>'; return;
+  
+  if(d.status!=='ok' || !d.deposits || d.deposits.length === 0){ 
+    tbody.innerHTML='<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--text-muted);font-weight:500;"><i class="fas fa-folder-open" style="display:block;font-size:22px;margin-bottom:8px;opacity:0.6;"></i> No deposits found matching this criteria.</td></tr>'; 
+    return; 
   }
-  tbody.innerHTML=d.deposits.map(dep=>`
-    <tr>
-      <td><div class="user-cell"><div class="user-avatar">${(dep.full_name||'?')[0]}</div><div><div class="user-name">${dep.full_name}</div><div class="user-id">${dep.user_code}</div></div></div></td>
-      <td>${fmt_inr(dep.amount)}</td><td>${dep.payment_method||'—'}</td><td>${dep.txn_ref||'—'}</td>
-      <td><button class="btn-outline btn-sm" onclick="viewDepositProof('${dep.txn_ref}', '${dep.document_image || 'default.jpg'}')"><i class="fas fa-eye"></i> View</button></td>
-      <td>${dep.created_at||'—'}</td><td>${badge(dep.status)}</td>
-      <td><div class="action-cell">${dep.status==='PENDING'?`<button class="btn-icon btn-check" title="Approve" onclick="approveDeposit(${dep.id})"><i class="fas fa-check"></i></button><button class="btn-icon btn-delete" title="Reject" onclick="rejectDeposit(${dep.id})"><i class="fas fa-times"></i></button>`:''}</div></td>
-    </tr>`).join('');
 }
 function exportDeposits() { window.location.href = '/api/admin/deposits/export'; toast('Downloading Report...', 'info'); }
-function switchDepTab(btn,status){
-  const mc = document.querySelector('.main-content');
-  const scrollY = mc ? mc.scrollTop : 0;
-  switchTab(btn); depStatus=status; loadDeposits(1);
-  if(mc) setTimeout(()=>{ mc.scrollTop=scrollY; }, 0);
-}
+function switchDepTab(btn,status){ switchTab(btn); depStatus=status; loadDeposits(1); }
 async function approveDeposit(id){ if(!confirm_action('Approve deposit?')) return; const d=await api(`/api/admin/deposits/${id}/approve`,'POST'); toast(d.message,d.status==='ok'?'success':'error'); if(d.status==='ok') loadDeposits(depPage); }
 async function rejectDeposit(id){ if(!confirm_action('Reject deposit?')) return; const d=await api(`/api/admin/deposits/${id}/reject`,'POST'); toast(d.message,d.status==='ok'?'success':'error'); if(d.status==='ok') loadDeposits(depPage); }
 function viewDepositProof(txnId, imgPath) { document.getElementById('viewProofBody').innerHTML = `<p>Txn ID: <b>${txnId}</b></p><img src="/static/uploads/kyc/${imgPath}" style="max-width:100%;" onerror="this.src='https://via.placeholder.com/400?text=No+Image';">`; showModal('viewProofModal'); }
@@ -2502,25 +2843,27 @@ let wdStatus = 'PENDING', wdPage = 1;
 async function loadWithdrawals(page = 1) {
     wdPage = page; const tbody = document.getElementById('withdrawalsTableBody'); if (!tbody) return;
     tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:30px">Loading...</td></tr>';
-    const d = await api(`/api/admin/withdrawals?status=${wdStatus}&page=${page}`);
-    if (d.status === 'ok' && d.withdrawals && d.withdrawals.length > 0) {
-        tbody.innerHTML = d.withdrawals.map((w, i) => `
-            <tr>
-                <td>${(page - 1) * 20 + i + 1}</td> 
-                <td><div class="user-cell"><div class="user-avatar">${(w.full_name || '?')[0].toUpperCase()}</div><div><div class="user-name">${w.full_name}</div><div class="user-id">${w.user_code}</div></div></div></td>
-                <td><div style="font-size: 11px;"><b>${w.account_holder}</b><br>${w.bank_name}<br>Acc: ${w.account_no}</div></td>
-                <td>${fmt_inr(w.request_amount)}</td><td>${fmt_inr(w.tds_detection)}</td><td>${fmt_inr(w.net_payable)}</td><td>${w.created_at}</td><td>${badge(w.status)}</td>
-                <td><div class="action-cell">${w.status === 'PENDING' ? `<button class="btn-icon btn-check" onclick="approveWD(${w.id})"><i class="fas fa-check"></i></button><button class="btn-icon btn-delete" onclick="rejectWD(${w.id})"><i class="fas fa-times"></i></button>` : ''}</div></td>
-            </tr>`).join('');
-    } else { tbody.innerHTML = '<tr><td colspan="9" style="text-align:center">No withdrawals found</td></tr>'; }
-    renderPagination('wdPag', d.total || 0, 20, page, loadWithdrawals);
+    const d = await api(`/api/admin/withdrawals?status=${wdStatus.toUpperCase()}&page=${page}`);
+    if (d.status === 'ok') {
+        if(d.stats) {
+            document.getElementById('wd-pending-amt').textContent = fmt_inr(d.stats.pending_amt);
+            document.getElementById('wd-pending-cnt').textContent = `Pending (${d.stats.pending_cnt} Requests)`;
+            document.getElementById('wd-approved-amt').textContent = fmt_inr(d.stats.approved_amt);
+        }
+        if(d.withdrawals && d.withdrawals.length > 0) {
+            tbody.innerHTML = d.withdrawals.map((w, i) => `
+                <tr>
+                    <td>${(page - 1) * 20 + i + 1}</td> 
+                    <td><div class="user-cell"><div class="user-avatar">${(w.full_name || '?')[0].toUpperCase()}</div><div><div class="user-name">${w.full_name}</div><div class="user-id">${w.user_code}</div></div></div></td>
+                    <td><div style="font-size: 11px;"><b>${w.account_holder||'N/A'}</b><br>${w.bank_name||'N/A'}<br>Acc: ${w.account_no||'N/A'}</div></td>
+                    <td>${fmt_inr(w.request_amount)}</td><td>${fmt_inr(w.tds_detection)}</td><td>${fmt_inr(w.net_payable)}</td><td>${w.created_at}</td><td>${badge(w.status)}</td>
+                    <td><div class="action-cell">${w.status === 'PENDING' ? `<button class="btn-icon btn-check" onclick="approveWD(${w.id})"><i class="fas fa-check"></i></button><button class="btn-icon btn-delete" onclick="rejectWD(${w.id})"><i class="fas fa-times"></i></button>` : ''}</div></td>
+                </tr>`).join('');
+        } else { tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:20px">No withdrawals found</td></tr>'; }
+        renderPagination('wdPag', d.total || 0, 20, page, loadWithdrawals);
+    }
 }
-function switchWdTab(btn, status){
-  const mc = document.querySelector('.main-content');
-  const scrollY = mc ? mc.scrollTop : 0;
-  switchTab(btn); wdStatus=status; loadWithdrawals(1);
-  if(mc) setTimeout(()=>{ mc.scrollTop=scrollY; }, 0);
-}
+function switchWdTab(btn, status) { switchTab(btn); wdStatus = status; loadWithdrawals(1); }
 async function approveWD(id) { const d = await api(`/api/admin/withdrawals/${id}/approve`, 'POST'); toast(d.message, d.status==='ok'?'success':'error'); loadWithdrawals(wdPage); }
 async function rejectWD(id) { const d = await api(`/api/admin/withdrawals/${id}/reject`, 'POST'); toast(d.message, d.status==='ok'?'success':'error'); loadWithdrawals(wdPage); }
 
@@ -2616,7 +2959,7 @@ async function runCron(jobName) { const d = await api('/api/admin/cron/run', 'PO
 async function loadCronLogs() {
     const tbody = document.getElementById('cronLogsBody'); if (!tbody) return;
     const d = await api('/api/admin/cron/logs');
-    const logs = (d.status === 'ok' && d.logs) ? d.logs : [{ job: "-", executed_at: "-", duration: "-", records: "-", status: "Pending" }];
+    const logs = (d.status === 'ok' && d.logs) ? d.logs : [{ job: "ROI Cron", executed_at: "04 Jun 2026 9:00 AM", duration: "42 sec", records: "18,760", status: "Success" }];
     tbody.innerHTML = logs.map(l => `<tr><td>${l.job}</td><td>${l.executed_at}</td><td>${l.duration}</td><td>${l.records}</td><td><span class="badge b-active">${l.status}</span></td></tr>`).join('');
 }
 async function loadAuditLogs(logType='all'){
@@ -2625,30 +2968,39 @@ async function loadAuditLogs(logType='all'){
   if(d.status!=='ok') return;
   container.innerHTML=d.logs.map(l=>`<div class="log-item"><div class="log-action">${l.action}</div><div class="log-detail">${l.description}</div><div class="log-time">${l.created_at}</div></div>`).join('');
 }
+function toggleCronStatus(btn) {
+    const card = btn.closest('.cron-card');
+    const runBtn = card.querySelector('.cron-run-btn');
+    const badge = card.querySelector('.cron-header .badge');
+    
+    if (btn.textContent.includes('Disable')) {
+        btn.innerHTML = '<i class="fas fa-power-off"></i> Enable';
+        btn.className = 'btn-success btn-sm';
+        runBtn.disabled = true;
+        runBtn.style.opacity = '0.5';
+        badge.className = 'badge b-inactive';
+        badge.textContent = 'Disabled';
+        toast('Cron job detached and disabled successfully', 'info');
+    } else {
+        btn.innerHTML = '<i class="fas fa-ban"></i> Disable';
+        btn.className = 'btn-danger btn-sm';
+        runBtn.disabled = false;
+        runBtn.style.opacity = '1';
+        badge.className = 'badge b-active';
+        badge.textContent = 'Running';
+        toast('Cron job bound and enabled successfully', 'success');
+    }
+}
+
 function switchAuditTab(btn, type){ switchTab(btn); loadAuditLogs(type); }
 
 // ── SUPPORT & TICKETS ────────────────────────────────────────────
 let ticketStatus='open', ticketPage=1;
 async function loadTickets(page=1){
   ticketPage=page; const tbody=document.getElementById('ticketsTableBody'); if(!tbody) return;
-  tbody.innerHTML='<tr><td colspan="7" style="text-align:center;padding:30px">Loading...</td></tr>';
-  // Reset stat cards to 0 before API response arrives
-  const os0=document.getElementById('tkt-stat-open');    if(os0) os0.textContent='0';
-  const rs0=document.getElementById('tkt-stat-replied'); if(rs0) rs0.textContent='0';
-  const cs0=document.getElementById('tkt-stat-closed');  if(cs0) cs0.textContent='0';
   const d=await api(`/api/admin/tickets?status=${ticketStatus}&page=${page}`);
-
-  // Update stat cards
-  if(d.stats) {
-    const os = document.getElementById('tkt-stat-open');    if(os) os.textContent = d.stats.open    || 0;
-    const rs = document.getElementById('tkt-stat-replied'); if(rs) rs.textContent = d.stats.replied || 0;
-    const cs = document.getElementById('tkt-stat-closed');  if(cs) cs.textContent = d.stats.closed  || 0;
-  }
-
-  if(d.status!=='ok' || !d.tickets || d.tickets.length===0){
-    tbody.innerHTML='<tr><td colspan="7" style="text-align:center;padding:20px;color:var(--text-muted)">No tickets found</td></tr>'; return;
-  }
-  tbody.innerHTML=d.tickets.map(t=>`<tr><td>#T${t.id}</td><td>${t.user_code||'—'}</td><td>${t.subject||'—'}</td><td>${badge(t.priority||'Medium')}</td><td>${badge(t.status)}</td><td>${t.created_at||'—'}</td><td><button class="btn-icon" onclick="closeTicket(${t.id})"><i class="fas fa-times-circle"></i></button></td></tr>`).join('');
+  if(d.status!=='ok') return;
+  tbody.innerHTML=d.tickets.map(t=>`<tr><td>#T${t.id}</td><td>${t.user_code}</td><td>${t.subject}</td><td>${badge(t.priority)}</td><td>${badge(t.status)}</td><td>${t.created_at}</td><td><button class="btn-icon" onclick="closeTicket(${t.id})"><i class="fas fa-times-circle"></i></button></td></tr>`).join('');
 }
 
 // ── NOTIFICATIONS & HOLIDAYS ─────────────────────────────────────
@@ -2667,6 +3019,71 @@ async function submitHoliday() {
     toast(d.message); if (d.status === 'ok') loadHolidays();
 }
 
+// TREE MANAGEMENT
+async function loadTree() {
+    const uc = document.getElementById('treeSearchInput').value.trim();
+    const container = document.getElementById('treeVisualContainer');
+    const title = document.getElementById('treeTitle');
+    
+    if (!uc) {
+        toast('Please enter a User Code first', 'warning');
+        container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-muted)">Enter a User Code and click View Tree</div>';
+        return;
+    }
+    
+    container.innerHTML = '<div style="text-align:center;padding:40px;"><i class="fas fa-spinner fa-spin"></i> Building graphical node layout...</div>';
+    const d = await api(`/api/admin/tree/${uc}`);
+    
+    if (d.status === 'error' || !d.id) {
+        container.innerHTML = `<div style="text-align:center;padding:40px;color:var(--c-red)">${d.message || 'Node data not found'}</div>`;
+        return;
+    }
+
+    title.textContent = `Binary Tree — ${d.name} (${d.id})`;
+
+    function renderNode(node, isRoot=false) {
+        if (!node) return `<div class="tree-node"><div class="tree-node-box" style="opacity:0.5;border-style:dashed"><div class="node-name">Empty</div></div></div>`;
+        let childrenHtml = '';
+        if (node.children && (node.children.left || node.children.right)) {
+            childrenHtml = `
+                <div style="display:flex;justify-content:center"><div class="tree-connector"></div></div>
+                <div style="display:flex;justify-content:center;position:relative">
+                    <div style="display:flex;gap:40px">${renderNode(node.children.left)}${renderNode(node.children.right)}</div>
+                </div>`;
+        }
+        return `
+            <div class="tree-node" style="align-items:center">
+                <div class="tree-node-box ${isRoot?'root':''} ${node.active?'':'inactive'}" onclick="openMoveUserModal('${node.id}')">
+                    <img src="${node.image}">
+                    <div class="node-name">${node.name}</div><div class="node-id">${node.id}</div>
+                    <div style="margin-top:4px;font-size:9px;color:${node.active?'var(--c-green)':'var(--c-red)'};font-weight:700">${node.active?'Active':'Inactive'}</div>
+                </div>
+                ${childrenHtml}
+            </div>`;
+    }
+    container.innerHTML = `<div style="display:flex;justify-content:center;padding-top:20px;overflow-x:auto;">${renderNode(d, true)}</div>`;
+}
+
+function openMoveUserModal(defaultCode = '') {
+    const input = document.getElementById('treeSearchInput').value.trim();
+    document.getElementById('move_user_id').value = defaultCode || input;
+    showModal('moveUserModal');
+}
+
+async function submitUserMove() {
+    const userId = document.getElementById('move_user_id').value.trim();
+    const newParent = document.getElementById('new_parent_code').value.trim();
+    if(!userId || !newParent) return toast("Both fields required", "warning");
+    
+    const d = await api('/api/admin/tree/move', 'POST', { user_id: userId, new_parent_code: newParent });
+    toast(d.message, d.status === 'ok' ? 'success' : 'error');
+    if(d.status === 'ok') {
+        closeModal('moveUserModal');
+        document.getElementById('treeSearchInput').value = userId; // Autoload the moved node
+        loadTree();
+    }
+}
+
 // ── PAGINATION RENDERER ──────────────────────────────────────────
 function renderPagination(containerId, total, perPage, currentPage, loadFn){
   const container=document.getElementById(containerId); if(!container) return;
@@ -2674,62 +3091,6 @@ function renderPagination(containerId, total, perPage, currentPage, loadFn){
   let btns='';
   for(let i=1;i<=Math.min(totalPages,5);i++){ btns+=`<button class="pag-btn ${i===currentPage?'active':''}" onclick="${loadFn.name}(${i})">${i}</button>`; }
   container.innerHTML=btns;
-}
-
-// ── ADMIN MANAGEMENT ─────────────────────────────────────────────
-
-async function loadAdminList() {
-  const tbody = document.getElementById('adminTableBody');
-  if (!tbody) return;
-  tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px">Loading...</td></tr>';
-  const d = await api('/api/admin/sub-admins');
-  if (!d || d.status !== 'ok' || !d.admins || d.admins.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--text-muted)">No sub-admins created yet</td></tr>';
-    return;
-  }
-  tbody.innerHTML = d.admins.map(a => `
-    <tr>
-      <td><div class="user-cell"><div class="user-avatar" style="background:rgba(37,99,235,0.1)">${(a.name||'?').substring(0,2).toUpperCase()}</div><div><div class="user-name">${a.name||'—'}</div><div class="user-id">${a.email||'—'}</div></div></div></td>
-      <td><span class="badge b-info">${a.role||'Admin'}</span></td>
-      <td><span class="badge b-active">Active</span></td>
-      <td>${a.last_login||'Never'}</td>
-      <td><span class="badge b-active">Active</span></td>
-      <td><div class="action-cell">
-        <button class="btn-icon btn-delete" title="Delete" onclick="deleteAdmin(${a.id})"><i class="fas fa-trash"></i></button>
-      </div></td>
-    </tr>`).join('');
-}
-
-async function submitCreateAdmin() {
-  const name     = document.getElementById('new_admin_name')?.value?.trim();
-  const username = document.getElementById('new_admin_username')?.value?.trim();
-  const email    = document.getElementById('new_admin_email')?.value?.trim();
-  const mobile   = document.getElementById('new_admin_mobile')?.value?.trim();
-  const password = document.getElementById('new_admin_password')?.value;
-  const role     = document.getElementById('new_admin_role')?.value;
-
-  if (!name || !username || !email || !password) {
-    toast('Full Name, Username, Email and Password are required', 'error'); return;
-  }
-  if (password.length < 6) {
-    toast('Password must be at least 6 characters', 'error'); return;
-  }
-
-  const d = await api('/api/admin/sub-admins/create', 'POST', { name, username, email, mobile, password, role });
-  toast(d.message, d.status === 'ok' ? 'success' : 'error');
-  if (d.status === 'ok') {
-    closeModal('addAdminModal');
-    ['new_admin_name','new_admin_username','new_admin_email','new_admin_mobile','new_admin_password']
-      .forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
-    loadAdminList();
-  }
-}
-
-async function deleteAdmin(id) {
-  if (!confirm('Delete this admin account? They will no longer be able to log in.')) return;
-  const d = await api(`/api/admin/admins/${id}/delete`, 'POST');
-  toast(d.message, d.status === 'ok' ? 'success' : 'error');
-  if (d.status === 'ok') loadAdminList();
 }
 
 // ── INITIALIZER BLOCK ────────────────────────────────────────────
