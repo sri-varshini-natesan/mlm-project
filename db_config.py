@@ -35,6 +35,14 @@ def get_db_connection():
         print(f"Pool exhaustion error: {e}")
         return None
 
+def get_db_connection():
+    if not db_pool: return None
+    try:
+        return db_pool.get_connection()
+    except Error as e:
+        print(f"Pool exhaustion error: {e}")
+        return None
+
 def calculate_daily_incomes():
     db = get_db_connection()
     if not db: raise Exception("Database connection failed during income calculation.")
@@ -168,29 +176,35 @@ def find_user_by_user_code(user_code):
 def get_team_stats(user_id):
     db = get_db_connection()
     if not db: return None
+    
+    # 1. Fetch Directs and Children (Main Cursor)
     cursor = db.cursor(dictionary=True)
     try:
-        # 1. Direct Referrals (Using sponsor_id)
+        # Get Direct Referrals
         cursor.execute("SELECT COUNT(*) as directs FROM users WHERE sponsor_id = %s", (user_id,))
-        directs = cursor.fetchone()['directs']
+        directs = cursor.fetchone()['directs'] or 0
 
-        # 2. Get both Left and Right nodes in a single, safe query execution
+        # Get Left/Right children
         cursor.execute("SELECT id, leg FROM users WHERE placement_id = %s AND leg IN ('left', 'right')", (user_id,))
         children = cursor.fetchall()
         
-        left_child_id = None
-        right_child_id = None
+        # DRAIN THE RESULT (Crucial for avoiding 'Unread result found')
+        while cursor.nextset(): pass 
         
-        for child in children:
-            if child['leg'] == 'left':
-                left_child_id = child['id']
-            elif child['leg'] == 'right':
-                right_child_id = child['id']
+        left_child_id = next((c['id'] for c in children if c['leg'] == 'left'), None)
+        right_child_id = next((c['id'] for c in children if c['leg'] == 'right'), None)
 
-        # 3. Dedicated internal function to consume and close tracking data sequentially
-        def count_downline(start_id):
-            if not start_id: return {"total": 0, "active": 0, "inactive": 0}
-            
+    finally:
+        # CLOSE MAIN CURSOR IMMEDIATELY after fetching IDs
+        cursor.close()
+
+    # 2. Downline Logic (Using separate cursor/connection context)
+    def count_downline(start_id):
+        if not start_id: return {"total": 0, "active": 0, "inactive": 0}
+        
+        # Open a new cursor for the recursive query
+        sub_cursor = db.cursor(dictionary=True)
+        try:
             query = """
                 WITH RECURSIVE downline AS (
                     SELECT id, is_active FROM users WHERE id = %s
@@ -202,32 +216,33 @@ def get_team_stats(user_id):
                        SUM(CASE WHEN is_active=0 THEN 1 ELSE 0 END) as inactive 
                 FROM downline;
             """
-            # Using a temporary clean cursor to avoid cross-contamination of unread results
-            sub_cursor = db.cursor(dictionary=True)
             sub_cursor.execute(query, (start_id,))
             res = sub_cursor.fetchone()
-            sub_cursor.close()
+            
+            # Drain results for stored procedures or CTEs
+            while sub_cursor.nextset(): pass
             
             return {
                 "total": int(res['total'] or 0), 
                 "active": int(res['active'] or 0), 
                 "inactive": int(res['inactive'] or 0)
             }
+        finally:
+            sub_cursor.close()
 
-        left_stats = count_downline(left_child_id)
-        right_stats = count_downline(right_child_id)
+    left_stats = count_downline(left_child_id)
+    right_stats = count_downline(right_child_id)
+    
+    db.close() # Close connection finally
 
-        return {
-            "direct_referrals": directs,
-            "left_team": left_stats['total'],
-            "right_team": right_stats['total'],
-            "active_team": left_stats['active'] + right_stats['active'],
-            "non_active": left_stats['inactive'] + right_stats['inactive'],
-            "total_team": left_stats['total'] + right_stats['total']
-        }
-    finally:
-        cursor.close()
-        db.close()
+    return {
+        "direct_referrals": directs,
+        "left_team": left_stats['total'],
+        "right_team": right_stats['total'],
+        "active_team": left_stats['active'] + right_stats['active'],
+        "non_active": left_stats['inactive'] + right_stats['inactive'],
+        "total_team": left_stats['total'] + right_stats['total']
+    }
 
 def get_financial_stats(user_id):
     db = get_db_connection()
@@ -285,45 +300,40 @@ def get_tree_view_data(user_code):
     if not db: return None
     cursor = db.cursor(dictionary=True)
 
-    def get_img_url(img_filename):
-        if img_filename: return f"/static/uploads/kyc/{img_filename}"
-        return "https://cdn-icons-png.flaticon.com/512/149/149071.png"
-
     try:
-        # Added JOIN to courses table
+        # 1. Fetch ALL relevant users in the tree (or the whole network) 
+        # so we don't have to query inside the recursion
         cursor.execute("""
-            SELECT u.id, u.user_code, u.full_name, u.is_active, u.profile_img, u.created_at, c.name as course_name 
+            SELECT u.id, u.user_code, u.full_name, u.is_active, u.placement_id, u.leg, u.profile_img, u.created_at, c.name as course_name 
             FROM users u
             LEFT JOIN user_courses uc ON u.id = uc.user_id AND uc.status = 'ACTIVE'
             LEFT JOIN courses c ON uc.course_id = c.id
-            WHERE u.user_code = %s
-        """, (user_code,))
-        root_user = cursor.fetchone()
-
+        """)
+        all_users = cursor.fetchall()
+        
+        # 2. Map users by ID for O(1) lookup
+        user_map = {u['id']: u for u in all_users}
+        
+        # 3. Find the root user
+        root_user = next((u for u in all_users if u['user_code'] == user_code), None)
         if not root_user: return None
 
+        # 4. Recursive builder (Now it uses the local dictionary, NOT the database)
         def build_node(user_record):
-            # Added JOIN to courses table for downlines
-            cursor.execute("""
-                SELECT u.id, u.user_code, u.full_name, u.is_active, u.leg, u.profile_img, u.created_at, c.name as course_name 
-                FROM users u
-                LEFT JOIN user_courses uc ON u.id = uc.user_id AND uc.status = 'ACTIVE'
-                LEFT JOIN courses c ON uc.course_id = c.id
-                WHERE u.placement_id = %s
-            """, (user_record['id'],))
-            children_records = cursor.fetchall()
-
             node_data = {
                 "id": user_record['user_code'],
                 "name": user_record['full_name'],
                 "active": user_record['is_active'],
-                "image": get_img_url(user_record['profile_img']),
+                "image": f"/static/uploads/kyc/{user_record['profile_img']}" if user_record['profile_img'] else "https://cdn-icons-png.flaticon.com/512/149/149071.png",
                 "course": user_record.get('course_name') or "Not Enrolled",
                 "join_date": user_record['created_at'].strftime("%d %b %Y") if user_record.get('created_at') else "N/A",
                 "children": { "left": None, "right": None }
             }
 
-            for child in children_records:
+            # Find children from the local map instead of SQL
+            children = [u for u in all_users if u['placement_id'] == user_record['id']]
+            
+            for child in children:
                 position = child['leg'].lower() if child['leg'] else ''
                 if position == 'left':
                     node_data["children"]["left"] = build_node(child)
@@ -335,6 +345,7 @@ def get_tree_view_data(user_code):
         tree_structure = build_node(root_user)
         tree_structure["status"] = "success"
         return tree_structure
+
     except Exception as e:
         print("Tree View Error:", e)
         return None
@@ -513,13 +524,18 @@ def verify_admin_login(username, password):
     if not db: return None
     cursor = db.cursor(dictionary=True)
     try:
-        # Securely check the hashed password for admins
         cursor.execute("SELECT id, username as name, role, password_hash FROM admin_users WHERE username = %s", (username,))
         admin = cursor.fetchone()
         
-        if admin and check_password_hash(admin['password_hash'], password):
-            admin.pop('password_hash', None) # Remove hash from memory
-            return admin
+        if admin:
+            db_pass = admin['password_hash']
+            # Smart Check: Support both hashed passwords and plain text for manual DB entries
+            if (db_pass.startswith('pbkdf2:') or db_pass.startswith('scrypt:')) and check_password_hash(db_pass, password):
+                admin.pop('password_hash', None)
+                return admin
+            elif db_pass == password:  # Plain text fallback
+                admin.pop('password_hash', None)
+                return admin
         return None
     except Exception as e:
         print("Admin Login Error:", e)
@@ -533,14 +549,18 @@ def verify_login(user_code, password):
     if not db: return None
     cursor = db.cursor(dictionary=True)
     try:
-        # Securely check the hashed password
         cursor.execute("SELECT id, full_name as name, user_code, is_active, password FROM users WHERE user_code = %s", (user_code,))
         user = cursor.fetchone()
         
-        if user and check_password_hash(user['password'], password):
-            # Remove the password from the dictionary before returning the user profile
-            user.pop('password', None)
-            return user
+        if user:
+            db_pass = user['password']
+            # Smart Check: Support both hashed passwords and plain text for manual DB entries
+            if (db_pass.startswith('pbkdf2:') or db_pass.startswith('scrypt:')) and check_password_hash(db_pass, password):
+                user.pop('password', None)
+                return user
+            elif db_pass == password:  # Plain text fallback
+                user.pop('password', None)
+                return user
         return None
     except Exception as e:
         print("Login Error:", e)
