@@ -654,7 +654,12 @@ input:checked+.slider:before{transform:translateX(20px);}
         <h3><i class="fas fa-cog" style="color:var(--c-blue)"></i> Binary Settings</h3>
         <div class="form-grid">
           <div class="form-group"><label>Binary Percentage (%)</label><input class="form-control" id="bin_percent" value="10" type="number"></div>
-          <div class="form-group"><label>First Match Rule</label><select class="form-control" id="bin_rule"><option>1:2 (L=1, R=2)</option><option>2:1 (L=2, R=1)</option></select></div>
+          
+          <div class="form-group">
+              <label>First Match Rule</label>
+              <input class="form-control" id="bin_rule" value="1:2 (L=1, R=2) / 2:1 (L=2, R=1)" readonly style="background-color: #f8fafc; color: var(--text-muted); cursor: default;">
+          </div>
+
           <div class="form-group"><label>Daily Flush Out Limit (₹)</label><input class="form-control" id="bin_limit" value="50000" type="number"></div>
           <div class="form-group"><label>Carry Forward</label><select class="form-control" id="bin_carry"><option>Enabled</option><option>Disabled</option></select></div>
         </div>
