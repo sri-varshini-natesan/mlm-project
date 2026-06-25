@@ -117,19 +117,12 @@
     <main class="main-content">
         <header class="top-header">
             <div class="user-greeting" style="display: flex; align-items: center; gap: 14px;">
-                <button id="menuToggle" style="background: none; border: none; font-size: 22px; color: var(--text-main); cursor: pointer; display: none; padding: 4px;">
+                <button id="menuToggle" style="display: none; background: none; border: none; font-size: 20px;">
                     <i class="fas fa-bars"></i>
                 </button>
                 <div>
                     <h2>Withdraw Request</h2>
                     <p>Request payout to your linked bank account</p>
-                </div>
-            </div>
-            
-            <div class="header-actions">
-                <div class="notification"><i class="far fa-bell"></i></div>
-                <div class="user-profile">
-                    <img src="{{ profile_img }}" alt="Profile">
                 </div>
             </div>
         </header>
@@ -169,89 +162,123 @@
 
 <script>
     document.addEventListener("DOMContentLoaded", () => {
-        // --- ADD THIS LOGIC ---
+        // --- 1. GLOBAL: Sidebar & Hamburger Logic ---
         const menuToggle = document.getElementById('menuToggle');
         const sidebar = document.getElementById('sidebar');
 
-        menuToggle.addEventListener('click', () => {
-            sidebar.classList.toggle('active');
-        });
-
-        // Close sidebar when clicking outside on mobile
-        document.addEventListener('click', (e) => {
-            if (window.innerWidth <= 900) {
-                if (!sidebar.contains(e.target) && e.target !== menuToggle) {
+        if (menuToggle && sidebar) {
+            menuToggle.style.display = "block";
+            menuToggle.addEventListener('click', (e) => {
+                e.stopPropagation();
+                sidebar.classList.toggle('active');
+            });
+            document.addEventListener('click', (e) => {
+                if (window.innerWidth <= 900 && !sidebar.contains(e.target) && e.target !== menuToggle) {
                     sidebar.classList.remove('active');
                 }
-            }
-        });
+            });
+        }
+
+        // --- 2. GLOBAL: Profile Redirect ---
+        const profile = document.querySelector('.user-profile');
+        if (profile) {
+            profile.style.cursor = 'pointer';
+            profile.addEventListener('click', () => window.location.href = '/profile');
+        }
+
+        // --- 3. GLOBAL: Notification Setup ---
+        const bell = document.getElementById('notificationBell');
+        if (bell) {
+            bell.addEventListener('click', () => bell.classList.remove('has-unread'));
+        }
+
+        // --- 4. PAGE SPECIFIC: Load Withdraw Data ---
+        loadWithdrawalData();
     });
-    // Helper to render a row
+
+    // --- GLOBAL: Dropdown Toggle ---
+    function toggleDropdown(btn) {
+        const menu = btn.nextElementSibling;
+        const isShow = menu.style.display === 'block';
+        document.querySelectorAll('.action-menu').forEach(m => m.style.display = 'none');
+        menu.style.display = isShow ? 'none' : 'block';
+    }
+
+    // --- GLOBAL: Notification Engine ---
+    function addSystemNotification(title, message, isError = false) {
+        const list = document.getElementById('topNotifList');
+        const badge = document.getElementById('top-notif-badge');
+        const empty = document.getElementById('emptyNotifMsg');
+        
+        if (empty) empty.style.display = 'none';
+        
+        const item = document.createElement('div');
+        item.style.cssText = "padding: 8px 0; border-bottom: 1px solid #f0f0f0; font-size: 12px;";
+        item.innerHTML = `<b>${title}</b><br><span style="color:#666">${message}</span>`;
+        list.prepend(item);
+        
+        if(badge) {
+            badge.style.display = 'block';
+            badge.innerText = parseInt(badge.innerText || 0) + 1;
+        }
+    }
+
+    // --- WITHDRAWAL LOGIC ---
+    async function loadWithdrawalData() {
+        const res = await fetch('/api/withdraw/me');
+        const data = await res.json();
+        
+        if (data.status === 'success') {
+            const balEl = document.getElementById('availBalance');
+            if(balEl) balEl.innerText = '₹ ' + parseFloat(data.balance).toLocaleString('en-IN', {minimumFractionDigits: 2});
+            
+            const tbody = document.getElementById('historyTableBody');
+            tbody.innerHTML = '';
+            
+            if (data.history && data.history.length > 0) {
+                data.history.forEach(h => renderRow(tbody, h.created_at, h.request_amount, h.status));
+            } else {
+                tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:20px;">No recent transactions</td></tr>';
+            }
+        }
+    }
+
     function renderRow(tbody, date, amount, status) {
         let statusColor = status.toUpperCase() === 'PENDING' ? 'var(--color-orange)' : 'var(--color-green)';
         let formattedAmount = parseFloat(amount).toLocaleString('en-IN', {minimumFractionDigits: 2});
-        
         tbody.innerHTML += `
             <tr style="border-bottom: 1px solid #eee;">
                 <td style="padding: 12px;">${date}</td>
                 <td style="padding: 12px;">₹ ${formattedAmount}</td>
                 <td style="padding: 12px; font-weight: 800; color: ${statusColor};">${status.toUpperCase()}</td>
-            </tr>
-        `;
+            </tr>`;
     }
 
-    // Handle Form Submit
     document.getElementById('withdrawForm').addEventListener('submit', function(e) {
         e.preventDefault();
-        const amtInput = document.getElementById('amount');
-        const amt = parseFloat(amtInput.value);
-        let currentBal = parseFloat(document.getElementById('availBalance').innerText.replace(/[^0-9.-]+/g,""));
-
-        if (amt < 100) return alert("Minimum withdrawal is ₹ 100");
-        if (amt > currentBal) return alert("Insufficient funds!");
-
-        // --- THE FIX: Send the data to the backend ---
+        const amt = parseFloat(document.getElementById('amount').value);
         fetch('/api/withdraw/request', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ amount: amt }) // Sending the amount to Python
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ amount: amt })
         })
         .then(res => res.json())
         .then(data => {
             if (data.status === 'success') {
-                // Only update the UI if the database successfully saved it
-                const tbody = document.getElementById('historyTableBody');
-                if(tbody.innerHTML.includes("No recent transactions")) tbody.innerHTML = '';
-                
-                // Format today's date
-                let today = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
-                renderRow(tbody, today, amt, 'PENDING');
-                
-                // Update balance on screen
-                document.getElementById('availBalance').innerText = '₹ ' + (currentBal - amt).toLocaleString('en-IN', {minimumFractionDigits: 2});
-                amtInput.value = '';
-                
-                // Show success message from the backend (includes TDS/Admin fee details)
-                alert(data.message);
+                loadWithdrawalData();
+                addSystemNotification("Withdrawal Success", data.message);
             } else {
-                // Show error message if the backend rejected it
-                alert("Error: " + data.message);
+                addSystemNotification("Error", data.message, true);
             }
-        })
-        .catch(err => {
-            console.error("Error:", err);
-            alert("A network error occurred. Please try again.");
         });
+        
     });
-
     document.querySelector('a[href="/logout"]')?.addEventListener('click', function(e) {
         e.preventDefault();
         if (confirm("Are you sure you want to logout?")) {
-            localStorage.clear(); 
+            localStorage.clear();
             sessionStorage.clear();
-            window.location.href = "/logout"; 
+            window.location.href = "/logout";
         }
     });
 </script>
