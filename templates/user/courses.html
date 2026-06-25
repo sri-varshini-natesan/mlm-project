@@ -173,11 +173,6 @@
                     <p>Purchase courses to unlock exclusive video training.</p>
                 </div>
             </div>
-            <div class="header-actions">
-                <div class="user-profile">
-                    <img src="{{ profile_img }}" alt="Profile">
-                </div>
-            </div>
         </header>
 
         <div class="dashboard-container">
@@ -191,17 +186,17 @@
             <div class="course-section">
                 <div class="section-title title-basic">Basic Courses</div>
                 <div class="course-grid">
-                    <div class="course-card" data-price="500">
+                    <div class="course-card" data-id="1" data-price="500">
                         <div class="card-header"><div class="course-icon icon-basic"><i class="fas fa-book"></i></div><span class="badge">Loading...</span></div>
                         <div class="course-title">Course BC1</div><div class="course-price">₹ 500</div>
                         <div class="card-footer"><button class="btn">Purchase</button></div>
                     </div>
-                    <div class="course-card" data-price="1700">
+                    <div class="course-card" data-id="2" data-price="1700">
                         <div class="card-header"><div class="course-icon icon-basic"><i class="fas fa-book-open"></i></div><span class="badge">Loading...</span></div>
                         <div class="course-title">Course BC2</div><div class="course-price">₹ 1,700</div>
                         <div class="card-footer"><button class="btn">Purchase</button></div>
                     </div>
-                    <div class="course-card" data-price="4400">
+                    <div class="course-card" data-id="3" data-price="4400">
                         <div class="card-header"><div class="course-icon icon-basic"><i class="fas fa-layer-group"></i></div><span class="badge">Loading...</span></div>
                         <div class="course-title">Course BC3</div><div class="course-price">₹ 4,400</div>
                         <div class="card-footer"><button class="btn">Purchase</button></div>
@@ -212,17 +207,17 @@
             <div class="course-section">
                 <div class="section-title title-master">Master Courses</div>
                 <div class="course-grid">
-                    <div class="course-card" data-price="10400">
+                    <div class="course-card" data-id="4" data-price="10400">
                         <div class="card-header"><div class="course-icon icon-master"><i class="fas fa-laptop-code"></i></div><span class="badge">Loading...</span></div>
                         <div class="course-title">Course MC1</div><div class="course-price">₹ 10,400</div>
                         <div class="card-footer"><button class="btn">Purchase</button></div>
                     </div>
-                    <div class="course-card" data-price="24500">
+                    <div class="course-card" data-id="5" data-price="24500">
                         <div class="card-header"><div class="course-icon icon-master"><i class="fas fa-chalkboard-teacher"></i></div><span class="badge">Loading...</span></div>
                         <div class="course-title">Course MC2</div><div class="course-price">₹ 24,500</div>
                         <div class="card-footer"><button class="btn">Purchase</button></div>
                     </div>
-                    <div class="course-card" data-price="49000">
+                    <div class="course-card" data-id="6" data-price="49000">
                         <div class="card-header"><div class="course-icon icon-master"><i class="fas fa-certificate"></i></div><span class="badge">Loading...</span></div>
                         <div class="course-title">Course MC3</div><div class="course-price">₹ 49,000</div>
                         <div class="card-footer"><button class="btn">Purchase</button></div>
@@ -233,22 +228,22 @@
             <div class="course-section">
                 <div class="section-title title-advanced">Advanced Courses</div>
                 <div class="course-grid">
-                    <div class="course-card" data-price="99900">
+                    <div class="course-card" data-id="7" data-price="99900">
                         <div class="card-header"><div class="course-icon icon-advanced"><i class="fas fa-chart-line"></i></div><span class="badge">Loading...</span></div>
                         <div class="course-title">Course AC1</div><div class="course-price">₹ 99,900</div>
                         <div class="card-footer"><button class="btn">Purchase</button></div>
                     </div>
-                    <div class="course-card" data-price="140000">
+                    <div class="course-card" data-id="8" data-price="140000">
                         <div class="card-header"><div class="course-icon icon-advanced"><i class="fas fa-rocket"></i></div><span class="badge">Loading...</span></div>
                         <div class="course-title">Course AC2</div><div class="course-price">₹ 1,40,000</div>
                         <div class="card-footer"><button class="btn">Purchase</button></div>
                     </div>
-                    <div class="course-card" data-price="199000">
+                    <div class="course-card" data-id="9" data-price="199000">
                         <div class="card-header"><div class="course-icon icon-advanced"><i class="fas fa-crown"></i></div><span class="badge">Loading...</span></div>
                         <div class="course-title">Course AC3</div><div class="course-price">₹ 1,99,000</div>
                         <div class="card-footer"><button class="btn">Purchase</button></div>
                     </div>
-                    <div class="course-card" data-price="299000">
+                    <div class="course-card" data-id="10" data-price="299000">
                         <div class="card-header"><div class="course-icon icon-advanced"><i class="fas fa-gem"></i></div><span class="badge">Loading...</span></div>
                         <div class="course-title">Course AC4</div><div class="course-price">₹ 2,99,000</div>
                         <div class="card-footer"><button class="btn">Purchase</button></div>
@@ -326,297 +321,164 @@
         </div>
 
     </div>
-
-    <script>
-        // Global variables for tracking
-        let currentCoursePlaying = "";
-        let currentPurchaseData = {};
-
-        document.addEventListener("DOMContentLoaded", () => {
-            const menuToggle = document.getElementById('menuToggle');
-            const sidebar = document.getElementById('sidebar');
-
-            if (menuToggle && sidebar) {
-                menuToggle.addEventListener('click', function(e) {
-                    e.stopPropagation();
-                    sidebar.classList.toggle('active');
-                });
-
-                document.addEventListener('click', function(e) {
-                    if (!sidebar.contains(e.target) && sidebar.classList.contains('active')) {
-                        sidebar.classList.remove('active');
-                    }
-                });
-            }
-
-            if (!document.getElementById('custom-toast-container')) {
-                const toastContainer = document.createElement('div');
-                toastContainer.id = 'custom-toast-container';
-                toastContainer.style.cssText = 'position: fixed; top: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px;';
-                document.body.appendChild(toastContainer);
-            }
-            
-            // Modal Close Events
-            document.getElementById('closePayment').addEventListener('click', closeAllModals);
-            document.getElementById('closeVideo').addEventListener('click', () => {
-                closeAllModals();
-                const videoEl = document.getElementById('courseVideo');
-                videoEl.pause();
-                videoEl.currentTime = 0;
-            });
-
-            // "Pay Now" Button Event
-            document.getElementById('btnPayNow').addEventListener('click', processPaymentSimulation);
-
-            // Certificate Generation Event Trigger
-            document.getElementById('courseVideo').addEventListener('ended', () => {
-                generateAndDownloadCertificate(currentCoursePlaying);
-            });
-
-            loadUserPackages();
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+    // 1. Sidebar Logic
+    const menuToggle = document.getElementById('menuToggle');
+    const sidebar = document.getElementById('sidebar');
+    if (menuToggle && sidebar) {
+        menuToggle.style.display = "block";
+        menuToggle.addEventListener('click', (e) => {
+            e.stopPropagation();
+            sidebar.classList.toggle('active');
         });
-
-        // --- UI UTILITIES --- //
-        function sendUiNotification(title, message, isError = false) {
-            const container = document.getElementById('custom-toast-container');
-            if (container) {
-                const toast = document.createElement('div');
-                toast.style.cssText = `
-                    background: #ffffff; color: #1b2559; padding: 16px 24px; border-radius: 12px;
-                    box-shadow: 0 10px 25px rgba(11, 20, 55, 0.15); border-left: 5px solid ${isError ? '#ef4444' : '#1a73e8'};
-                    font-family: 'Inter', sans-serif; min-width: 300px; transform: translateX(120%);
-                    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); opacity: 0; z-index: 99999;
-                `;
-                toast.innerHTML = `
-                    <div style="font-weight: 800; font-size: 14px; margin-bottom: 4px; display: flex; align-items: center; gap: 8px;">
-                        <i class="fas ${isError ? 'fa-exclamation-circle' : 'fa-bell'}" style="color: ${isError ? '#ef4444' : '#1a73e8'};"></i> ${title}
-                    </div>
-                    <div style="font-size: 12px; font-weight: 500; color: #8f9bba; line-height: 1.4;">${message}</div>
-                `;
-                container.appendChild(toast);
-                setTimeout(() => { toast.style.transform = 'translateX(0)'; toast.style.opacity = '1'; }, 50);
-                setTimeout(() => { toast.style.transform = 'translateX(120%)'; toast.style.opacity = '0'; setTimeout(() => toast.remove(), 400); }, 4500);
+        document.addEventListener('click', (e) => {
+            if (!sidebar.contains(e.target) && sidebar.classList.contains('active')) {
+                sidebar.classList.remove('active');
             }
-        }
+        });
+    }
 
-        function showModalStep(stepId) {
-            document.getElementById('paymentCheckout').style.display = 'none';
-            document.getElementById('paymentProcessing').style.display = 'none';
-            document.getElementById('paymentSuccess').style.display = 'none';
-            document.getElementById('videoPlayer').style.display = 'none';
+    // 2. Fetch Course Status on Load
+    loadMyCourses();
+});
+
+// API Helper
+async function api(url, method='GET', body=null) {
+    const opts = { method, headers: {'Content-Type': 'application/json'} };
+    if(body) opts.body = JSON.stringify(body);
+    const r = await fetch(url, opts);
+    return await r.json();
+}
+
+// 3. Perfect Course Status & Purchase Logic
+async function loadMyCourses() {
+    const d = await api('/api/courses/my-packages');
+    if (d.status === 'success') {
+        // CLEAN THE DATA: Convert everything to lowercase and remove spaces
+        const owned = (d.owned_courses || []).map(s => s.trim().toLowerCase());
+        
+        console.log("Owned courses from API (cleaned):", owned);
+
+        document.querySelectorAll('.course-card').forEach(card => {
+            const titleEl = card.querySelector('.course-title');
+            const badge = card.querySelector('.badge');
             
-            // Fix modal widths based on content
-            const masterContent = document.querySelector('#masterModal .modal-content:not([style*="display: none"])');
-            if (masterContent) {
-                masterContent.style.maxWidth = stepId === 'videoPlayer' ? '800px' : '500px';
-            }
+            // CLEAN THE HTML: Convert to lowercase and remove spaces
+            const courseNameInHtml = titleEl ? titleEl.innerText.trim().toLowerCase() : '';
             
-            document.getElementById(stepId).style.display = 'block';
-            document.getElementById('masterModal').classList.add('show');
-        }
+            console.log(`Matching: API:"${owned[0]}" vs HTML:"${courseNameInHtml}"`);
 
-        function closeAllModals() {
-            document.getElementById('masterModal').classList.remove('show');
-            if(currentPurchaseData.button) {
-                currentPurchaseData.button.innerText = currentPurchaseData.origText;
-                currentPurchaseData.button.disabled = false;
+            if (owned.includes(courseNameInHtml)) {
+                card.classList.add('active-card');
+                badge.innerText = "Active";
+                badge.className = "badge badge-active";
+            } else {
+                badge.innerText = "Available";
+                badge.className = "badge badge-inactive";
             }
-        }
+        });
+    }
+}
 
-        function selectPaymentMethod(element) {
-            document.querySelectorAll('.payment-method').forEach(el => el.classList.remove('selected'));
-            element.classList.add('selected');
-        }
+async function loadUserPackages() {
+    try {
+        const response = await fetch('/api/courses/my-packages');
+        const data = await response.json();
+        
+        console.log("API Response received:", data); // THIS IS YOUR DEBUG LOG
 
-        // --- COURSE LOADING --- //
-        function loadUserPackages() {
-            fetch('/api/courses/my-packages')
-                .then(res => res.json())
-                .then(data => {
-                    if (data.status === 'success') {
-                        const ownedCourses = data.owned_courses || [];
-                        const purchasedToday = data.purchased_today || [];
-                        
-                        document.querySelectorAll('.course-card').forEach(card => {
-                            const titleEl = card.querySelector('.course-title');
-                            const courseName = titleEl ? titleEl.innerText.trim() : '';
-                            const priceAttr = card.getAttribute('data-price') || "0";
-                            const coursePrice = parseFloat(priceAttr);
-                            
-                            const badge = card.querySelector('.badge');
-                            const button = card.querySelector('.btn');
-                            
-                            // Overall Ownership Status
-                            if (ownedCourses.includes(courseName)) {
-                                card.classList.add('active-card');
-                                if (badge) { badge.innerText = "Active"; badge.className = "badge badge-active"; }
-                            } else {
-                                if (badge) { badge.innerText = "Available"; badge.className = "badge badge-inactive"; }
-                            }
+        if (data.status === 'success') {
+            const owned = data.owned_courses || [];
+            const boughtToday = data.purchased_today || [];
 
-                            // Same Day Purchase Logic
-                            if (button) {
-                                if (purchasedToday.includes(courseName)) {
-                                    button.innerText = "Enrolled";
-                                    button.className = "btn btn-view-app";
-                                    button.onclick = function() {
-                                        sendUiNotification("Already Enrolled", "You have already purchased this course today. You can purchase it again tomorrow.", true);
-                                    };
-                                } else {
-                                    button.innerText = "Purchase";
-                                    button.className = "btn btn-purchase";
-                                    button.onclick = function() {
-                                        initiateCheckout(courseName, coursePrice, card, button);
-                                    };
-                                }
-                            }
-                        });
+            document.querySelectorAll('.course-card').forEach(card => {
+                const titleEl = card.querySelector('.course-title');
+                const courseName = titleEl ? titleEl.innerText.trim() : '';
+                
+                // Debugging: Is the name we are searching for matching the HTML?
+                console.log(`Checking card: ${courseName} | Owned: ${owned.includes(courseName)}`);
+
+                const badge = card.querySelector('.badge');
+                const btn = card.querySelector('.btn');
+
+                // UI Logic
+                if (owned.includes(courseName)) {
+                    card.classList.add('active-card');
+                    if(badge) {
+                        badge.innerText = "Active";
+                        badge.className = "badge badge-active";
                     }
-                })
-                .catch(err => console.error("Error coordinating owned packages:", err));
-        }
-
-        // --- GATEWAY SIMULATION FLOW --- //
-        function initiateCheckout(name, price, cardElement, button) {
-            currentPurchaseData = {
-                name: name,
-                price: price,
-                card: cardElement,
-                button: button,
-                origText: button.innerText
-            };
-
-            button.innerText = "Connecting...";
-            button.disabled = true;
-
-            // Populate Checkout details
-            document.getElementById('checkoutAmount').innerText = '₹ ' + price.toLocaleString('en-IN');
-            document.getElementById('checkoutItem').innerText = name + ' Package';
-
-            // Show Checkout Step
-            showModalStep('paymentCheckout');
-        }
-
-        function processPaymentSimulation() {
-            // Show Processing Spinner
-            showModalStep('paymentProcessing');
-
-            // Simulate Gateway Delay (2 seconds)
-            setTimeout(() => {
-                executeBackendPurchase();
-            }, 2000);
-        }
-
-        function executeBackendPurchase() {
-            // 1. Grab the ID from the HTML card (defaults to 1 if your HTML doesn't have a data-id yet)
-            const cid = currentPurchaseData.card.getAttribute('data-id') || 
-                        currentPurchaseData.card.getAttribute('data-course-id') || 1;
-
-            fetch('/api/courses/purchase', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    course_id: parseInt(cid) // 🌟 THIS IS EXACTLY WHAT PYTHON WANTS! 🌟
-                })
-            })
-            .then(res => res.json())
-            .then(data => {
-                if (data.status === 'success') {
-                    // Update UI Card behind the modal
-                    currentPurchaseData.card.classList.add('active-card');
-                    const badge = currentPurchaseData.card.querySelector('.badge');
-                    if (badge) { badge.innerText = "Active"; badge.className = "badge badge-active"; badge.style = ""; }
-                    
-                    currentPurchaseData.button.innerText = "Enrolled";
-                    currentPurchaseData.button.className = "btn btn-view-app";
-                    currentPurchaseData.button.onclick = function() {
-                        sendUiNotification("Already Enrolled", "You have already purchased this course today.", true);
-                    };
-
-                    // Show Success Animation Step
-                    showModalStep('paymentSuccess');
-
-                    // After 1.5s, Transition to Video Player
-                    setTimeout(() => {
-                        launchVideoPlayer(currentPurchaseData.name);
-                    }, 1500);
-
-                    currentPurchaseData.button = null; 
-
                 } else {
-                    sendUiNotification("Transaction Failed", data.message, true);
-                    closeAllModals();
+                    if(badge) {
+                        badge.innerText = "Available";
+                        badge.className = "badge badge-inactive";
+                    }
                 }
-            })
-            .catch(err => {
-                console.error("Purchase fault:", err);
-                sendUiNotification("Network Failure", "Payment gateway connection lost.", true);
-                closeAllModals();
+
+                if (btn) {
+                    if (boughtToday.includes(courseName)) {
+                        btn.disabled = true;
+                        btn.innerText = "Enrolled";
+                        btn.style.opacity = "0.5";
+                    } else {
+                        btn.disabled = false;
+                        btn.innerText = "Purchase";
+                        btn.onclick = () => initiateCheckout(card);
+                    }
+                }
             });
         }
+    } catch (e) {
+        console.error("Load Packages Error:", e);
+    }
+}
 
-        // --- LMS FEATURES --- //
-        function launchVideoPlayer(courseName) {
-            currentCoursePlaying = courseName;
-            document.getElementById('videoTitle').innerText = courseName + " - Premium Masterclass";
-            
-            showModalStep('videoPlayer');
-            
-            const videoEl = document.getElementById('courseVideo');
-            videoEl.play().catch(e => console.log("Auto-play prevented by browser."));
+// 4. Checkout Flow
+function initiateCheckout(cardElement) {
+    const name = cardElement.getAttribute('data-course-name');
+    const price = cardElement.getAttribute('data-price');
+    const id = cardElement.getAttribute('data-id');
+    
+    document.getElementById('checkoutAmount').innerText = '₹ ' + Number(price).toLocaleString('en-IN');
+    document.getElementById('checkoutItem').innerText = name;
+    
+    document.getElementById('btnPayNow').onclick = () => processPayment(id, name, cardElement);
+    showModalStep('paymentCheckout');
+}
+
+async function processPayment(id, name, card) {
+    showModalStep('paymentProcessing');
+    const d = await api('/api/courses/purchase', 'POST', { course_id: id });
+    
+    if (d.status === 'success') {
+        showModalStep('paymentSuccess');
+        loadMyCourses(); // Update UI to Active status
+        setTimeout(() => showModalStep('videoPlayer'), 2000);
+    } else {
+        alert(d.message);
+        closeAllModals();
+    }
+}
+
+// UI Helpers
+function showModalStep(stepId) {
+    document.getElementById('masterModal').classList.add('show');
+    document.querySelectorAll('.modal-content').forEach(s => s.style.display = 'none');
+    document.getElementById(stepId).style.display = 'block';
+}
+
+function closeAllModals() {
+    document.getElementById('masterModal').classList.remove('show');
+}
+document.querySelector('a[href="/logout"]')?.addEventListener('click', function(e) {
+        e.preventDefault();
+        if (confirm("Are you sure you want to logout?")) {
+            localStorage.clear();
+            sessionStorage.clear();
+            window.location.href = "/logout";
         }
-
-        function generateAndDownloadCertificate(courseName) {
-            sendUiNotification("Course Completed!", "Generating your official certificate...");
-            
-            const canvas = document.createElement('canvas');
-            canvas.width = 1000; canvas.height = 700;
-            const ctx = canvas.getContext('2d');
-
-            ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
-            ctx.strokeStyle = '#1a73e8'; ctx.lineWidth = 20; ctx.strokeRect(20, 20, canvas.width - 40, canvas.height - 40);
-            ctx.strokeStyle = '#e9edf7'; ctx.lineWidth = 4; ctx.strokeRect(50, 50, canvas.width - 100, canvas.height - 100);
-
-            ctx.fillStyle = '#1b2559'; ctx.font = 'bold 46px Arial, sans-serif'; ctx.textAlign = 'center';
-            ctx.fillText('CERTIFICATE OF COMPLETION', canvas.width / 2, 160);
-
-            ctx.font = 'italic 22px Arial, sans-serif'; ctx.fillStyle = '#8f9bba';
-            ctx.fillText('This certificate is proudly presented to', canvas.width / 2, 250);
-
-            ctx.font = 'bold 42px Arial, sans-serif'; ctx.fillStyle = '#1a73e8';
-            const userName = "{{ user_name | default('Valued Student') }}";
-            ctx.fillText(userName.toUpperCase(), canvas.width / 2, 330);
-
-            ctx.font = '20px Arial, sans-serif'; ctx.fillStyle = '#1b2559';
-            ctx.fillText('for successfully completing all training modules & requirements of', canvas.width / 2, 400);
-
-            ctx.font = 'bold 36px Arial, sans-serif'; ctx.fillStyle = '#05cd99';
-            ctx.fillText(courseName, canvas.width / 2, 470);
-
-            ctx.font = '18px Arial, sans-serif'; ctx.fillStyle = '#1b2559';
-            const today = new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' });
-            ctx.fillText('Date: ' + today, 250, 600);
-            
-            ctx.beginPath(); ctx.moveTo(150, 570); ctx.lineTo(350, 570); ctx.strokeStyle = '#8f9bba'; ctx.lineWidth = 1; ctx.stroke();
-
-            ctx.fillText('Authorized Signature', 750, 600);
-            ctx.beginPath(); ctx.moveTo(650, 570); ctx.lineTo(850, 570); ctx.stroke();
-            ctx.font = 'italic 32px "Times New Roman", serif'; ctx.fillStyle = '#1a73e8'; ctx.fillText('Admin', 750, 560);
-
-            const link = document.createElement('a');
-            link.download = `Certificate_${courseName.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.png`;
-            link.href = canvas.toDataURL('image/png');
-            document.body.appendChild(link); link.click(); document.body.removeChild(link);
-            
-            closeAllModals();
-        }
-
-        document.querySelector('a[href="/logout"]')?.addEventListener('click', function(e) {
-            e.preventDefault();
-            if (confirm("Are you sure you want to logout?")) {
-                localStorage.clear(); sessionStorage.clear(); window.location.href = "/logout"; 
-            }
-        });
-    </script>
+    });
+</script>
 </body>
 </html>
