@@ -124,9 +124,6 @@
                     <h2>History Log</h2>
                 </div>
             </div>
-            <div class="user-profile">
-                <img src="{{ profile_img }}" alt="Profile">
-            </div>
         </header>
 
         <div class="dashboard-container">
@@ -242,6 +239,14 @@
                     document.getElementById('history-tbody').innerHTML = `<tr><td colspan="3" style="text-align: center; color: var(--color-red); padding: 40px;"><i class="fas fa-exclamation-triangle"></i> Network Error. Please try again later.</td></tr>`;
                 });
         });
+        document.querySelector('a[href="/logout"]')?.addEventListener('click', function(e) {
+        e.preventDefault();
+        if (confirm("Are you sure you want to logout?")) {
+            localStorage.clear();
+            sessionStorage.clear();
+            window.location.href = "/logout";
+        }
+    });
     </script>
 </body>
 </html>
