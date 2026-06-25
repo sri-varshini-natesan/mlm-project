@@ -206,7 +206,27 @@ def api_purchase_course():
     except Exception as e:
         print(f"Purchase Error: {str(e)}")
         return jsonify({"status": "error", "message": "An internal server error occurred."}), 500
+
+@app.route('/api/dashboard/me', methods=['GET'])
+def api_dashboard_me():
+    if 'user_id' not in session:
+        return jsonify({"status": "error", "message": "Unauthorized"}), 401
     
+    user_id = session['user_id']
+    
+    # Fetch both sets of data
+    # Ensure these function names match what you have in db_config.py
+    financials = get_financial_stats(user_id)
+    team_data = get_team_stats(user_id) 
+    
+    return jsonify({
+        "status": "success",
+        "data": {
+            "financials": financials,
+            "team": team_data
+        }
+    })
+
 @app.route('/api/admin/tree-data/<user_code>')
 def api_admin_tree_data(user_code):
     if 'user_id' not in session:
@@ -232,22 +252,6 @@ def income_history_page():
 # ==========================================
 # DASHBOARD API (USER SIDE)
 # ==========================================
-@app.route('/api/dashboard/me', methods=['GET'])
-def api_dashboard_me():
-    if 'user_id' not in session: return jsonify({"error": "Unauthorized"}), 401
-    user_id = session['user_id']
-    user_name = session.get('user_name')
-    financials = get_financial_stats(user_id)
-    team = get_team_stats(user_id)
-    
-    if user_name == "John Doe":
-        financials = {
-            "total_income": 125450.00, "total_withdrawal": 68750.00, "current_balance": 56700.00, "cashback_bonus": 150.00,
-            "staking_bonus": 45680.00, "sponsor_bonus": 12350.00, "binary_bonus": 18600.00, "repurchase_bonus": 5470.00, "royalty_bonus": 43200.00
-        }
-        team = { "direct_referrals": 125, "left_team": 1250, "right_team": 1380, "active_team": 1892, "non_active": 738, "total_team": 2630 }
-        
-    return jsonify({"status": "success", "data": {"financials": financials, "team": team}})
 
 @app.route('/api/profile/me', methods=['GET'])
 def api_get_profile():
@@ -271,30 +275,51 @@ def api_get_profile():
 
 @app.route('/api/courses/my-packages', methods=['GET'])
 def api_my_packages():
-    if 'user_id' not in session: return jsonify({"error": "Unauthorized"}), 401
-    if session.get('user_name') == "John Doe": 
-        return jsonify({"status": "success", "owned_courses": ["Course BC2"], "purchased_today": []})
+    if 'user_id' not in session: 
+        return jsonify({"status": "error", "message": "Unauthorized"}), 401
     
+    uid = session['user_id']
     db = get_db_connection()
+    if not db: return jsonify({"status": "error", "message": "DB Failed"}), 500
+    
     cursor = db.cursor(dictionary=True)
     try:
-        cursor.execute("""
-            SELECT DISTINCT c.name as course_name 
+        # 1. Fetch ALL active courses for this user
+        # We use UPPER(status) = 'ACTIVE' to make sure it matches even if it's 'active' or 'ACTIVE'
+        query = """
+            SELECT c.name as course_name 
             FROM user_courses uc 
             JOIN courses c ON uc.course_id = c.id 
-            WHERE uc.user_id = %s AND uc.status = 'ACTIVE'
-        """, (session['user_id'],))
-        owned_courses = [r['course_name'] for r in cursor.fetchall()]
+            WHERE uc.user_id = %s 
+            AND UPPER(uc.status) = 'ACTIVE'
+        """
+        cursor.execute(query, (uid,))
+        rows = cursor.fetchall()
         
+        owned_courses = [r['course_name'] for r in rows]
+        
+        # DEBUG: Print to terminal to verify what the database returned
+        print(f"DEBUG: Found {len(owned_courses)} active courses for User {uid}: {owned_courses}")
+        
+        # 2. Fetch today's purchases (for the disable button logic)
         cursor.execute("""
-            SELECT DISTINCT c.name as course_name 
+            SELECT c.name as course_name 
             FROM user_courses uc 
             JOIN courses c ON uc.course_id = c.id 
-            WHERE uc.user_id = %s AND DATE(uc.created_at) = CURDATE()
-        """, (session['user_id'],))
+            WHERE uc.user_id = %s 
+            AND DATE(uc.created_at) = CURDATE()
+        """, (uid,))
         purchased_today = [r['course_name'] for r in cursor.fetchall()]
         
-        return jsonify({"status": "success", "owned_courses": owned_courses, "purchased_today": purchased_today})
+        return jsonify({
+            "status": "success", 
+            "owned_courses": owned_courses, 
+            "purchased_today": purchased_today
+        })
+        
+    except Exception as e:
+        print(f"DEBUG: Error in api_my_packages: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
     finally:
         cursor.close(); db.close()
 
@@ -375,22 +400,35 @@ def api_withdraw_request():
     finally:
         cursor.close(); db.close()
 
-@app.route('/api/withdraw/me')
+@app.route('/api/withdraw/me', methods=['GET'])
 def api_withdraw_me():
-    if 'user_id' not in session: return jsonify({"status": "error"}), 401
+    if 'user_id' not in session:
+        return jsonify({"status": "error", "message": "Not logged in"}), 401
+    
+    uid = session['user_id']
     db = get_db_connection()
     cursor = db.cursor(dictionary=True)
-    cursor.execute("SELECT wallet_balance FROM users WHERE id = %s", (session['user_id'],))
-    user = cursor.fetchone()
-    balance = float(user['wallet_balance']) if user else 0
     
-    cursor.execute("""
-        SELECT DATE_FORMAT(created_at, '%d %b %Y') as date, request_amount as amount, status 
-        FROM withdrawals WHERE user_id = %s ORDER BY created_at DESC
-    """, (session['user_id'],))
-    history = cursor.fetchall()
-    cursor.close(); db.close()
-    return jsonify({"status": "success", "balance": balance, "history": history})
+    try:
+        # 1. Fetch current wallet balance from users table
+        cursor.execute("SELECT wallet_balance FROM users WHERE id = %s", (uid,))
+        user = cursor.fetchone()
+        balance = float(user['wallet_balance']) if user else 0.0
+        
+        # 2. Fetch withdrawal history
+        cursor.execute("""
+            SELECT request_amount, net_payable, status, created_at 
+            FROM withdrawals WHERE user_id = %s ORDER BY created_at DESC
+        """, (uid,))
+        history = cursor.fetchall()
+        
+        print(f"DEBUG: User {uid} balance: {balance}, History count: {len(history)}")
+        return jsonify({"status": "success", "balance": balance, "history": history})
+    except Exception as e:
+        print(f"ERROR: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+    finally:
+        cursor.close(); db.close()
 
 # ==========================================
 # ADMIN API ENDPOINTS - PRODUCTION DATABASE ONLY
