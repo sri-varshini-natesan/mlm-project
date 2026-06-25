@@ -54,7 +54,24 @@
         .user-greeting p { font-size: 13px; color: var(--text-muted); font-weight: 600; margin-top: 2px; }
 
         .header-actions { display: flex; align-items: center; gap: 24px; }
-        .notification { position: relative; cursor: pointer; color: var(--text-muted); font-size: 20px; transition: var(--transition); }
+        /* Ensure the notification wrapper holds the badge */
+        .notification { 
+            position: relative; 
+            cursor: pointer; 
+        }
+
+        /* Style the dropdown so it doesn't look broken */
+        #topNotifList {
+            right: 0; 
+            top: 100%; 
+            width: 250px; 
+            background: white; 
+            border: 1px solid #e9edf7; 
+            border-radius: 12px; 
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1); 
+            padding: 10px; 
+            z-index: 1000;
+        }
         .notification:hover { color: var(--color-blue); }
         .notification.has-unread::after { content: ''; position: absolute; top: -2px; right: -2px; width: 8px; height: 8px; background-color: var(--color-red); border-radius: 50%; border: 2px solid white; }
 
@@ -114,8 +131,30 @@
         .share-option i { width: 20px; text-align: center; font-size: 18px; }
 
         @media (max-width: 1300px) { .grid-4 { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); } .grid-5 { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); } }
-        @media (max-width: 900px) { #menuToggle { display: block !important; } .sidebar { position: fixed; left: -260px; top: 0; height: 100vh; z-index: 1000; } .sidebar.active { left: 0; } .main-content { width: 100%; } .top-header { padding: 16px 20px; } .dashboard-container { padding: 20px; } }
-    </style>
+        /* --- RESPONSIVE GRID STACKING --- */
+    @media(max-width: 900px) {
+        /* Sidebar as overlay */
+        .sidebar { position: fixed; left: -260px; height: 100vh; transition: 0.3s; z-index: 1000; }
+        .sidebar.active { left: 0; box-shadow: 0 0 20px rgba(0,0,0,0.2); }
+        .main-content { width: 100%; }
+        
+        /* Responsive Grids */
+        .grid-4 { grid-template-columns: repeat(2, 1fr) !important; gap: 12px; }
+        .grid-5 { grid-template-columns: 1fr !important; gap: 12px; }
+        
+        .dashboard-container { padding: 15px; }
+        .stat-card { padding: 15px; }
+        .amount { font-size: 18px !important; }
+    }
+
+    @media(max-width: 480px) {
+        .grid-4 { grid-template-columns: 1fr !important; }
+    }
+
+    /* Sidebar Hamburger Toggle */
+    #menuToggle { display: none; }
+    @media (max-width: 900px) { #menuToggle { display: block !important; } }
+</style>
 </head>
 <body>
 <aside class="sidebar" id="sidebar">
@@ -146,10 +185,11 @@
                 </div>
             </div>
             <div class="header-actions">
-                <div class="notification has-unread" id="notificationBell"><i class="far fa-bell"></i></div>
-                <div class="user-profile">
-                    <img src="{{ profile_img }}" alt="Profile">
+                <div class="notification" id="notificationBell"><i class="far fa-bell"></i>
+                    <span id="top-notif-badge" style="display:none; position:absolute; top:-5px; right:-5px; background:red; color:white; font-size:10px; border-radius:50%; padding:2px 5px;">0</span>
+                    <div id="topNotifList" style="display:none; position:absolute; right:0; background:white; width:200px; padding:10px; border:1px solid #ccc;"></div>
                 </div>
+                <div class="user-profile"><img src="{{ profile_img }}" alt="Profile"></div>
             </div>
         </header>
 
@@ -239,102 +279,85 @@
                 <i class="fas fa-envelope" style="color: #ea4335;"></i> Email
             </a>
         </div>
+        
     </main>
     
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const menuToggle = document.getElementById('menuToggle');
-            const sidebar = document.getElementById('sidebar');
-            if (menuToggle && sidebar) {
-                menuToggle.addEventListener('click', function(e) {
-                    e.stopPropagation();
-                    sidebar.classList.toggle('active');
-                });
-                document.addEventListener('click', function(e) {
-                    if (!sidebar.contains(e.target) && sidebar.classList.contains('active')) {
-                        sidebar.classList.remove('active');
-                    }
-                });
-            }
-            
-            // Share FAB Logic
-            const fab = document.getElementById('shareFab');
-            const menu = document.getElementById('shareMenu');
-            if (fab && menu) {
-                fab.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    menu.style.display = (menu.style.display === 'block') ? 'none' : 'block';
-                });
-                document.addEventListener('click', () => { menu.style.display = 'none'; });
-            }
-            
-            if (!document.getElementById('custom-toast-container')) {
-                const toastContainer = document.createElement('div');
-                toastContainer.id = 'custom-toast-container';
-                toastContainer.style.cssText = 'position: fixed; top: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px;';
-                document.body.appendChild(toastContainer);
-            }
-            
-            const bell = document.getElementById('notificationBell');
-            if (bell) {
-                bell.addEventListener('click', function() {
-                    bell.classList.remove('has-unread');
-                    sendUiNotification("System Notifications", "Welcome back! Your secure connection to the node network pipeline is active.");
-                });
-            }
-            
-            fetch('/api/dashboard/me')
-                .then(response => response.json())
-                .then(data => {
-                    if (data.status === 'success') {
-                        const fin = data.data.financials || {};
-                        document.getElementById('val_total_income').innerText = '₹ ' + (fin.total_income || 0).toLocaleString('en-IN', {minimumFractionDigits: 2});
-                        document.getElementById('val_total_withdraw').innerText = '₹ ' + (fin.total_withdrawal || 0).toLocaleString('en-IN', {minimumFractionDigits: 2});
-                        document.getElementById('val_total_balance').innerText = '₹ ' + (fin.current_balance || 0).toLocaleString('en-IN', {minimumFractionDigits: 2});
-                        document.getElementById('val_cashback').innerText = '₹ ' + (fin.cashback_bonus || 0).toLocaleString('en-IN', {minimumFractionDigits: 2});
-                        document.getElementById('val_staking').innerText = '₹ ' + (fin.staking_bonus || 0).toLocaleString('en-IN', {minimumFractionDigits: 2});
-                        document.getElementById('val_sponsor').innerText = '₹ ' + (fin.sponsor_bonus || 0).toLocaleString('en-IN', {minimumFractionDigits: 2});
-                        document.getElementById('val_binary').innerText = '₹ ' + (fin.binary_bonus || 0).toLocaleString('en-IN', {minimumFractionDigits: 2});
-                        document.getElementById('val_repurchase').innerText = '₹ ' + (fin.repurchase_bonus || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})
-                        document.getElementById('val_royalty').innerText = '₹ ' + (fin.royalty_bonus || 0).toLocaleString('en-IN', {minimumFractionDigits: 2});
-                    }
-                })
-                .catch(error => console.error("Error fetching live data:", error));
-        });
+    document.addEventListener("DOMContentLoaded", () => {
+        // --- 1. Sidebar Logic ---
+        const menuToggle = document.getElementById('menuToggle');
+        const sidebar = document.getElementById('sidebar');
         
-        function sendUiNotification(title, message, isError = false) {
-            const container = document.getElementById('custom-toast-container');
-            if (container) {
-                const toast = document.createElement('div');
-                toast.style.cssText = `
-                    background: #ffffff; color: #1b2559; padding: 16px 24px; border-radius: 12px;
-                    box-shadow: 0 10px 25px rgba(11, 20, 55, 0.15); border-left: 5px solid ${isError ? '#ef4444' : '#1a73e8'};
-                    font-family: 'Inter', sans-serif; min-width: 300px; transform: translateX(120%);
-                    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); opacity: 0;
-                `;
-                toast.innerHTML = `
-                    <div style="font-weight: 800; font-size: 14px; margin-bottom: 4px; display: flex; align-items: center; gap: 8px;">
-                        <i class="fas ${isError ? 'fa-exclamation-circle' : 'fa-bell'}" style="color: ${isError ? '#ef4444' : '#1a73e8'};"></i> ${title}
-                    </div>
-                    <div style="font-size: 12px; font-weight: 500; color: #8f9bba; line-height: 1.4;">${message}</div>
-                `;
-                container.appendChild(toast);
-                setTimeout(() => { toast.style.transform = 'translateX(0)'; toast.style.opacity = '1'; }, 50);
-                setTimeout(() => {
-                    toast.style.transform = 'translateX(120%)'; toast.style.opacity = '0';
-                    setTimeout(() => toast.remove(), 400);
-                }, 4000);
-            }
+        if (menuToggle && sidebar) {
+            menuToggle.style.display = "block";
+            menuToggle.addEventListener('click', (e) => {
+                e.stopPropagation();
+                sidebar.classList.toggle('active');
+            });
+            document.addEventListener('click', (e) => {
+                if (window.innerWidth <= 900 && !sidebar.contains(e.target) && e.target !== menuToggle) {
+                    sidebar.classList.remove('active');
+                }
+            });
         }
+
+        // --- 2. Notification Bell (Defensive Check) ---
+        const bell = document.getElementById('notificationBell');
+        if (bell) {
+            bell.addEventListener('click', () => bell.classList.remove('has-unread'));
+        }
+
+        // --- 3. Share Button Logic (Fixed ID) ---
+        const shareFab = document.getElementById('shareFab');
+        const shareMenu = document.getElementById('shareMenu');
         
-        document.querySelector('a[href="/logout"]')?.addEventListener('click', function(e) {
-            e.preventDefault();
-            if (confirm("Are you sure you want to logout?")) {
-                localStorage.clear();
-                sessionStorage.clear();
-                window.location.href = "/logout";
-            }
-        });
-    </script>
+        if (shareFab && shareMenu) {
+            shareFab.addEventListener('click', (e) => {
+                e.stopPropagation();
+                shareMenu.style.display = (shareMenu.style.display === 'block') ? 'none' : 'block';
+            });
+            
+            // Close menu when clicking outside
+            document.addEventListener('click', (e) => {
+                if (!shareMenu.contains(e.target) && e.target !== shareFab) {
+                    shareMenu.style.display = 'none';
+                }
+            });
+        }
+
+        // --- 4. Dashboard Data Fetch ---
+        if (document.getElementById('val_total_income')) {
+            fetchDashboardData();
+        }
+
+        // --- 5. Profile Redirect ---
+        const profileDiv = document.querySelector('.user-profile');
+        if (profileDiv) {
+            profileDiv.style.cursor = 'pointer';
+            profileDiv.addEventListener('click', function(e) {
+                e.stopPropagation();
+                window.location.href = '/profile';
+            });
+        }
+    });
+
+    function fetchDashboardData() {
+        fetch('/api/dashboard/me')
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    const fin = data.data.financials || {};
+                    const ids = ['val_total_income', 'val_total_withdraw', 'val_total_balance', 'val_cashback', 'val_staking', 'val_sponsor', 'val_binary', 'val_repurchase', 'val_royalty'];
+                    const keys = ['total_income', 'total_withdrawal', 'current_balance', 'cashback_bonus', 'staking_bonus', 'sponsor_bonus', 'binary_bonus', 'repurchase_bonus', 'royalty_bonus'];
+                    
+                    ids.forEach((id, index) => {
+                        const el = document.getElementById(id);
+                        if(el) el.innerText = '₹ ' + (fin[keys[index]] || 0).toLocaleString('en-IN', {minimumFractionDigits: 2});
+                    });
+                }
+            })
+            .catch(error => console.error("Error fetching live data:", error));
+    }
+</script>
 </body>
 </html>
